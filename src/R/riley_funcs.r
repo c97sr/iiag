@@ -1,10 +1,36 @@
+load.iiag.data <- function(datadir="../../data") {
+
+    ## Load up the key variables
+    fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
+    fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
+    fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
+
+    fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
+    fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
+    fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
+
+    ## There is a slight issue with the name, as read, of the first column in id.
+    ## will use the name from the current data, to allow cbind. Woorth tidying up
+    ## at some point in the data
+    names(fid_old_1)[1] <- names(fid_this)[1]
+    names(fid_old_2)[1] <- names(fid_this)[1]
+    dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
+    names(fnet_old_1)[1] <- names(fnet_this)[1]
+    names(fnet_old_2)[1] <- names(fnet_this)[1]
+    dfNet <- rbind(fnet_old_1)
+
+    list(net=dfNet,id=dfIdXX)
+    
+}
+
 extract.incidence <- function(
                               dfId,
+                              sel_iso3,
+                              sel_ag,
+                              sel_measure,
                               minYear = 2010,
-                              maxYear = 2018,
-                              sel_iso3 = c("GBR","USA","DEU"),
-                              sel_ag = c("All"),
-                              sel_measure = c("ILI_CASES")) {
+                              maxYear = 2018
+) {
     
     ## Below here can form a function to return a complete set of week labels
     dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",dfId$ISO_WEEK),sep="-")
@@ -23,8 +49,6 @@ extract.incidence <- function(
         currentYear <- currentYear +1
     }
     
-    length(vecWeekScale)
-    
     ## Now need to use the week labels, and a country code to extract sums
     ## sums of incidence
     sel_weeks <- vecWeekScale
@@ -40,7 +64,7 @@ extract.incidence <- function(
         tmpdf <- tmpdf[order(tmpdf$yrweek),]
         max_ind_rtn <- dim(rtnmat)[1]    
         max_ind_df <- dim(tmpdf)[1]
-        
+
         cur_ind_rtn <- 1
         cur_ind_df <- 1   
         while (cur_ind_df <= max_ind_df) {
@@ -71,47 +95,30 @@ extract.incidence <- function(
 }
 
 if (FALSE) {
-
-    ## Clear objects form memory for debugging
+    
+    ## Clear objects form memory for debugging and source this file
     rm(list=ls(all=TRUE))
-    
-    ## Assumes running in the src/R directory at the moment
-    ## setwd("~/Dropbox/git/iiag/src/R")
-
-    ## Load up the key variables
-    fid_this <- read.csv("../../data/2017-2018_FluIDData.csv")
-    fid_old_1 <- read.csv("../../data/2010-2013_FluIDData.csv")
-    fid_old_2 <- read.csv("../../data/2014-2016_FluIDData.csv")
-    
-    fnet_this <- read.csv("../../data/2017-2018_FluNetData.csv")
-    fnet_old_1 <- read.csv("../../data/2010-2013_FluNetData.csv")
-    fnet_old_2 <- read.csv("../../data/2014-2016_FluNetData.csv")
-
-    ## Concatenate for one dataframe for each type
-
-    ## There is a slight issue with the name, as read, of the first column in id.
-    ## will use the name from the current data, to allow cbind. Woorth tidying up
-    ## at some point in the data
-    names(fid_old_1)[1] <- names(fid_this)[1]
-    names(fid_old_2)[1] <- names(fid_this)[1]
-    dfIdXX <- rbind(fid_this)
-    names(fnet_old_1)[1] <- names(fnet_this)[1]
-    names(fnet_old_2)[1] <- names(fnet_this)[1]
-    dfNet <- rbind(fnet_old_1)
-    
-    ## These are the data that we have to use
-    ## > names(dfId)
-    ## [1] "ISO3"            "ISO2"            "COUNTRY"         "REPORTSITE_CODE"
-    ## [5] "ISO_YEAR"        "ISO_WEEK"        "MEASURE_CODE"    "AGEGROUP_CODE"  
-    ## [9] "ValueString"     "ValueNumeric"   
-    ## > names(dfNet)
-    ## [1] "ISO3"            "ISO2"            "COUNTRY"         "REPORTSITE_CODE"
-    ## [5] "ISO_YEAR"        "ISO_WEEK"        "ISO_START_DATE"  "ISO_END_DATE"   
-    ## [9] "MEASURE_CODE"    "VIRUSTYPE_CODE"  "VIRUS_SUB_CODE"  "ValueString"    
-    ## [13] "ValueNumeric"   
-
     source("riley_funcs.r")
-    x <- extract.incidence(dfIdXX)
-    plot(x[,"GBR"])
 
+    ## Assumes running in src/R. Change datadir arg if needed.
+    tmp <- load.iiag.data()
+    df <- tmp$id
+    
+    ## Extract ILI cass for UK, USA and germany for all age groups
+    ## Doesn't seem quite right at the moment
+    x <- extract.incidence(
+        df,
+        sel_iso3 = c("GBR","USA","DEU"),
+        sel_ag = c("All"),
+        sel_measure = c("ILI_CASES")
+    )
+
+    ## Quick diagnostic plot of the incidence
+    plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
+    points(x[,"DEU"]+1,type="l",col="blue")
+    points(x[,"USA"]+1,type="l",col="green")
+    
+    ## tmpdf1 <- dfIdXX[dfIdXX$ISO3=="DEU" & dfIdXX$MEASURE_CODE=="ILI_CASES",] 
+    ## table(tmpdf1$AGEGROUP_CODE,tmpdf1$ISO_YEAR)
+    
 }
