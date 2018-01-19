@@ -1,28 +1,33 @@
+## Load up the data as two large dataframes.
+## Possible refinements are to add in date ranges and to get it to construct
+## older snapshots of the data using the date string or prevvious version,
+## next-previous and so on.
 load.iiag.data <- function(datadir="../../data") {
 
-    ## Load up the key variables
+    ## Define the strings for all the files needed and read in the 6 files
     fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
     fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
     fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
-
     fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
     fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
     fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
 
-    ## There is a slight issue with the name, as read, of the first column in id.
-    ## will use the name from the current data, to allow cbind. Woorth tidying up
-    ## at some point in the data
+    ## There is a slight issue with the name in the current versions of the data
+    ## These lines make sure that the column title for the ISO3 column is
+    ## consistent.
     names(fid_old_1)[1] <- names(fid_this)[1]
     names(fid_old_2)[1] <- names(fid_this)[1]
     dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
     names(fnet_old_1)[1] <- names(fnet_this)[1]
     names(fnet_old_2)[1] <- names(fnet_this)[1]
-    dfNet <- rbind(fnet_old_1)
+    dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_this)
 
-    list(net=dfNet,id=dfIdXX)
+    ## Return the two datasets as a list
+    list(lab=dfNet,synd=dfIdXX)
     
 }
 
+## Take the raw WHO country database and extract weekly incidence
 extract.incidence <- function(
                               dfId,
                               sel_iso3,
@@ -32,7 +37,9 @@ extract.incidence <- function(
                               maxYear = 2018
 ) {
     
-    ## Below here can form a function to return a complete set of week labels
+    ## Setup the week scale in a format consistent with the week format
+    ## int he data and cope wiht 53-week years. Needs the list of 53 week years
+    ## extending in both directions.
     dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",dfId$ISO_WEEK),sep="-")
     min(dfId$ISO_YEAR)
     yrs53Weeks <- c(2009,2015,2020)
@@ -49,24 +56,37 @@ extract.incidence <- function(
         currentYear <- currentYear +1
     }
     
-    ## Now need to use the week labels, and a country code to extract sums
-    ## sums of incidence
+    ## Define the return matrix for the function
     sel_weeks <- vecWeekScale
     rtnmat <- matrix(data=NA,nrow=length(sel_weeks),ncol=length(sel_iso3))
-    colnames(rtnmat) <- sel_iso3 
-    
+    colnames(rtnmat) <- sel_iso3
+    rownames(rtnmat) <- sel_weeks
+
+    ## Start outer loop over the country codes
     for (cur_iso3 in sel_iso3) {
-        
+
+        ## Define criteria and subset the data
         crit1 <- (dfId$ISO3 == cur_iso3)
         crit2 <- (dfId$AGEGROUP_CODE %in% sel_ag) 
         crit3 <- (dfId$MEASURE_CODE %in% sel_measure)
         tmpdf <- dfId[crit1 & crit2 & crit3,]
         tmpdf <- tmpdf[order(tmpdf$yrweek),]
+
+        ## Setup the preconditions for the nested while loops
         max_ind_rtn <- dim(rtnmat)[1]    
         max_ind_df <- dim(tmpdf)[1]
-
         cur_ind_rtn <- 1
-        cur_ind_df <- 1   
+        cur_ind_df <- 1
+
+        ## 2-level while loop with index "pointers" into the rtn matrix
+        ## and the dataframe. Scans through the data and the rtn matrix
+        ## at the same time and adds any none-na value that meets the
+        ## criteria for any given week. This works only because the
+        ## date format is correctly ordered by sort even though its not
+        ## a numeric and the subsetted dataframe _has_ been sorted.
+        ## Could be done with a small number of table commands, but I
+        ## (SR) wanted to be able to handle any line-by-line cleaning
+        ## in future within this loop if needed.
         while (cur_ind_df <= max_ind_df) {
             while (
                 sel_weeks[cur_ind_rtn] != tmpdf$yrweek[cur_ind_df] &&
@@ -87,9 +107,12 @@ extract.incidence <- function(
                 }
             }
             cur_ind_df <- cur_ind_df + 1 
-        }   
-    }
+        }
 
+        ## Close the country-level loop 
+    }
+    
+    ## Return the populated incidence matrix
     rtnmat
 
 }
@@ -100,12 +123,16 @@ if (FALSE) {
     rm(list=ls(all=TRUE))
     source("riley_funcs.r")
 
-    ## Assumes running in src/R. Change datadir arg if needed.
-    tmp <- load.iiag.data()
-    df <- tmp$id
+    ## Assumes running in src/R. Change datadir as needed. Select the
+    ## syndromic data after loading
+    tmp <- load.iiag.data(datadir="../../data")
+    df <- tmp$synd
     
     ## Extract ILI cass for UK, USA and germany for all age groups
-    ## Doesn't seem quite right at the moment
+    ## Doesn't seem quite right at the moment because of the blanks and
+    ## zeros for the UK and germany. But need to eyeball specific lines of
+    ## the data to be sure its a real problem. Data for other countries seems
+    ## to come out OK.
     x <- extract.incidence(
         df,
         sel_iso3 = c("GBR","USA","DEU"),
@@ -117,8 +144,5 @@ if (FALSE) {
     plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
     points(x[,"DEU"]+1,type="l",col="blue")
     points(x[,"USA"]+1,type="l",col="green")
-    
-    ## tmpdf1 <- dfIdXX[dfIdXX$ISO3=="DEU" & dfIdXX$MEASURE_CODE=="ILI_CASES",] 
-    ## table(tmpdf1$AGEGROUP_CODE,tmpdf1$ISO_YEAR)
-    
+        
 }
