@@ -5,23 +5,37 @@
 load.iiag.data <- function(datadir="../../data") {
 
     ## Define the strings for all the files needed and read in the 6 files
-    fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
+    fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""),
+                         header=FALSE)
+    fid_old_0 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
     fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
     fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
     fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
+    fnet_old_0 <- read.csv(paste(datadir,"/2000-2009_FluNetData.csv",sep=""))
     fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
     fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
 
     ## There is a slight issue with the name in the current versions of the data
     ## These lines make sure that the column title for the ISO3 column is
     ## consistent.
-    names(fid_old_1)[1] <- names(fid_this)[1]
-    names(fid_old_2)[1] <- names(fid_this)[1]
-    dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
+    ## Below also takes care of a missing header row for current snapshot
+    names(fid_old_1)[1] <- names(fnet_this)[1]
+    names(fid_old_2)[1] <- names(fnet_this)[1]
     names(fnet_old_1)[1] <- names(fnet_this)[1]
     names(fnet_old_2)[1] <- names(fnet_this)[1]
-    dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_this)
+    names(fid_this) <- names(fid_old_1)
+    
+    ## Use rbind to make the large tables. Should throw an error if the column
+    ## names change in the future.
 
+
+    ## dfIdXX <- rbind(fid_old_0,fid_old_1,fid_old_2,fid_this)
+    ## dfNet <- rbind(fnet_old_0,fnet_old_1,fnet_old_2,fnet_this)
+
+    ## Not currently including the 00 to 09 data as it breaks the test plots
+    dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
+    dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_this)
+    
     ## Return the two datasets as a list
     list(lab=dfNet,synd=dfIdXX)
     
@@ -38,7 +52,7 @@ extract.incidence <- function(
 ) {
     
     ## Setup the week scale in a format consistent with the week format
-    ## int he data and cope wiht 53-week years. Needs the list of 53 week years
+    ## in the data and cope with 53-week years. Needs the list of 53 week years
     ## extending in both directions.
     dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",dfId$ISO_WEEK),sep="-")
     min(dfId$ISO_YEAR)
@@ -112,11 +126,12 @@ extract.incidence <- function(
         ## Close the country-level loop 
     }
     
-    ## Return the populated incidence matrix
+    ## Return the populated incidence matrix as only result of function
     rtnmat
 
 }
 
+## Script used for development and testing
 if (FALSE) {
     
     ## Clear objects form memory for debugging and source this file
@@ -140,7 +155,7 @@ if (FALSE) {
         sel_measure = c("ILI_CASES")
     )
 
-    ## Quick diagnostic plot of the incidence
+    ## Quick diagnostic plot
     plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
     points(x[,"DEU"]+1,type="l",col="blue")
     points(x[,"USA"]+1,type="l",col="green")
