@@ -37,13 +37,15 @@ if (FALSE) {
 
     rm(list=ls(all=TRUE))
     ## setwd() 
-    source("riley_funcs.r")
+    source("src/R/riley_funcs.r")
+    source("src/R/viboud_funcs.r")
     dataflu=load.iiag.data()
 
     ## Extract data for all countries
     x <- extract.incidence(
-        dataflu$id,
-        sel_iso3 = unique(dataflu$id$ISO3),
+        dataflu$synd,
+        minYear=2010,
+        sel_iso3 = unique(dataflu$synd$ISO3),
         sel_ag = c("All"),
         sel_measure = c("ILI_CASES"))
 
@@ -59,7 +61,8 @@ if (FALSE) {
 
     ## Reextract data for set of more complete countries
     x <- extract.incidence(
-        dataflu$id,
+        dataflu$synd,
+        minYear=2010,
         sel_iso3 = sel_iso,
         sel_ag = c("All"),
         sel_measure = c("ILI_CASES")

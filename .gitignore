@@ -36,6 +36,7 @@ vignettes/*.pdf
 # File types added by sr
 *Rproj
 *\~
+*\#*
 notes/*.tex
 notes/*.aux
 notes/*.log

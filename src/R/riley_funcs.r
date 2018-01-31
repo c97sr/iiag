@@ -2,7 +2,7 @@
 ## Possible refinements are to add in date ranges and to get it to construct
 ## older snapshots of the data using the date string or prevvious version,
 ## next-previous and so on.
-load.iiag.data <- function(datadir="../../data") {
+load.iiag.data <- function(datadir="data") {
 
     ## Define the strings for all the files needed and read in the 6 files
     fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""),
@@ -27,17 +27,15 @@ load.iiag.data <- function(datadir="../../data") {
     
     ## Use rbind to make the large tables. Should throw an error if the column
     ## names change in the future.
-
-
-    ## dfIdXX <- rbind(fid_old_0,fid_old_1,fid_old_2,fid_this)
-    ## dfNet <- rbind(fnet_old_0,fnet_old_1,fnet_old_2,fnet_this)
+    dfIdXX_dev <- rbind(fid_old_0,fid_old_1,fid_old_2,fid_this)
+    dfNet_dev <- rbind(fnet_old_0,fnet_old_1,fnet_old_2,fnet_this)
 
     ## Not currently including the 00 to 09 data as it breaks the test plots
     dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
     dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_this)
     
     ## Return the two datasets as a list
-    list(lab=dfNet,synd=dfIdXX)
+    list(lab=dfNet,synd=dfIdXX,labDev=dfNet_dev,syndDev=dfIdXX_dev)
     
 }
 
@@ -47,7 +45,7 @@ extract.incidence <- function(
                               sel_iso3,
                               sel_ag,
                               sel_measure,
-                              minYear = 2010,
+                              minYear = 2000,
                               maxYear = 2018
 ) {
     
@@ -143,6 +141,11 @@ if (FALSE) {
     ## syndromic data after loading
     tmp <- load.iiag.data(datadir="data")
     df <- tmp$synd
+    dfDev <- tmp$syndDev
+
+    ## Need a bit more of a play to see what is there from before 2010
+    dim(df)
+    dim(dfDev)
     
     ## Extract ILI cass for UK, USA and germany for all age groups
     ## Doesn't seem quite right at the moment because of the blanks and
@@ -151,11 +154,12 @@ if (FALSE) {
     ## to come out OK.
     x <- extract.incidence(
         df,
+        minYear=2010,
         sel_iso3 = c("GBR","USA","DEU"),
         sel_ag = c("All"),
         sel_measure = c("ILI_CASES")
     )
-
+    
     ## Quick diagnostic plot
     plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
     points(x[,"DEU"]+1,type="l",col="blue")
