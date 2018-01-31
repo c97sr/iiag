@@ -206,6 +206,6 @@ if (FALSE) {
 
     ## Plot country averages
     ## This line doesn't work, DH and SR working on the functions above at the moment
-    ave_seas_plots(df,zones)    
+    ave_seas_plots(df,zones)
     
 }
