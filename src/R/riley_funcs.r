@@ -135,12 +135,13 @@ extract.incidence <- function(
 if (FALSE) {
     
     ## Clear objects form memory for debugging and source this file
+    ## setwd("~/Dropbox/git/iiag/")
     rm(list=ls(all=TRUE))
-    source("riley_funcs.r")
+    source("src/R/riley_funcs.r")
 
     ## Assumes running in src/R. Change datadir as needed. Select the
     ## syndromic data after loading
-    tmp <- load.iiag.data(datadir="../../data")
+    tmp <- load.iiag.data(datadir="data")
     df <- tmp$synd
     
     ## Extract ILI cass for UK, USA and germany for all age groups
