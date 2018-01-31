@@ -193,6 +193,7 @@ ave_seas_plots <- function(
 
 if (FALSE) {
 
+    ## You may need to change this for where you have downloaded the git repository 
     ## setwd("~/Dropbox/git/iiag")
     rm(list=ls(all=TRUE))
     source("src/R/riley_funcs.r")
