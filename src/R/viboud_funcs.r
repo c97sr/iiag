@@ -68,6 +68,10 @@ if (FALSE) {
         sel_measure = c("ILI_CASES")
     )
 
+    ## fluIliCountryData <- x
+    ## save(fluIliCountryData,file="~/tmp/fluIliCountryData.rda")
+    
+    
     ## Quick diagnostic plot of the incidence
     ## numeric index for date
     datee=seq(from=2010,by=1/52.17, length.out=dim(x)[1])
@@ -84,8 +88,8 @@ if (FALSE) {
 
     ## Getting basic geographic country info 
     ## All world countries
-    setwd("H://FluNet/Data/")
-    countrydesc=read.table('../../data/country_list_ISO.csv', sep=',',
+    ## setwd("H://FluNet/Data/")
+    countrydesc=read.table("data/country_list_ISO.csv", sep=',',
                            header=TRUE)
 
 
