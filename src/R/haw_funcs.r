@@ -1,43 +1,31 @@
-ave_seas_plots <- function(
+average_curve <- function(
                            df, # dataframe with output from other routines
                            zones, # dataframe defining transmission zones
-                           plotCategory = "country", #"zone" or "country"
-                           nameArea = "USA", #Select country
-                           YearStart = 2016) {
+                           plotCategory = "country", #"zone" or "country" - add whoregion?
+                           nameArea = "FRA", #Select country (ISO3)
+                           YearStart = 2016) { # First year of season, irresepctive of hemisphere
 
     require(gdata)
     require(reshape2)
-    require(ggplot2)
     require(plyr)
-    require(zoo)
-    require(epitools)
-    require(Deducer)
     require(stringr)
-
-    ## Path and File Definition #Change file directories according
-    ## to your own settings
-    baseFolder <- "~/Global Burden/Julia F"
-    setwd(baseFolder)
-    dataFile <- "dfNet.csv" #Option to import
-
-    ##Fill these in as required:
-    ##Need object linking country/ITZ/hemisphere
-    ## SR These now taen as arguments
-    # plotCategory <- "country" #"zone" or "country"
-    # nameArea <- "USA" #Select country
-    # YearStart <- 2016
-
+    #require(ggplot2)
+    #require(zoo)
+    #require(epitools)
+    #require(Deducer)
+    
 
     ## Zones needed below here
     if (plotCategory=="country"){
         ISO3ind <- nameArea #Select country
-        ITZind <- zones$itz[zones$country==ISO3ind]
-        HEMIS <- zones$hemis[zones$country==ISO3ind]
+        HEMIS <- zones$hemis[zones$ISO3==ISO3ind]
     } else {
         ITZind <- nameArea
-        countries <- zones$country[zones$itz==ITZind]
-        countries <- levels(countries)
+        countries <- zones$ISO3[zones$itz==ITZind]
+        #countries <- list(unique(countries))#levels(countries)
         ISO3ind <- nameArea #Treat as single country in rest of code
+        HEMIS <- zones$hemis[zones$itz==nameArea]
+        HEMIS <- HEMIS[1]
     }
 
     if (HEMIS=="northern"){
@@ -50,19 +38,6 @@ ave_seas_plots <- function(
     }
 
     ################################
-    ## Or just run from here, inputting the following manually:
-    ##(country only)
-    ## dataFile <- "dfNet.csv" #Option to import
-    ## SR df and zones now assumed to be an argument
-    ## df <- read.csv(dataFile,as.is=T)                 
-    ## plotCategory <- "country" #"zone" or "country"
-    ## ISO3ind <- "DEU" #Select country
-    ## ITZind <- "ITZ" #Select ITZ
-    ## HEMIS <- "northern" #"northern"/"southern"/"tropical"
-    ## NOW <- "2016/2017"
-    ## NOW2 <- "2017" #The later year of current season
-    ## YearStart <- 2016 #First year in current season
-    ################################
 
     ## measures <- c("SPEC_PROCESSED_NB", "DECTECTED_NB")
     ## res <- res[which(res$MEASURE_CODE %in% measures), ]
@@ -71,7 +46,8 @@ ave_seas_plots <- function(
 
     if (plotCategory=="country"){
         df2 <- df[df$ISO3==ISO3ind, ]
-        countryName <- df2[1,3]
+        countryName <- zones$country[which(zones$ISO3==ISO3ind)]
+        countryName <- countryName[1]
     } else{ 
         df2 <- df[df$ISO3 %in% countries, ]
         countryName <- nameArea #Better versions of names?
@@ -155,39 +131,48 @@ ave_seas_plots <- function(
     nVals <- apply(df4, 2, function(x) length(which(!is.na(x))))
     currentYear <- as.numeric(df4[currentYear, ])
     
-                                        #Plot:
+    ################################
+    
+    #Plot:
+    col1 <- "darkred"#(.667,.224,.224)
+    col2 <- "black"#rgb(0,0,0)#(.831,.416,.416)
+    col3 <- rgb(1,1,1)#(1,.667,.667)
     endChop <- 5
     xmax <- length(currentYear)
     ymax <- min( (c( max(currentYear, na.rm=TRUE), max(pastAv, na.rm=TRUE))+20), 100, na.rm=TRUE)
     tvec <- seq((chop+1), (xmax-endChop))
     plot(pastAv[tvec], type="l",xlim=c(1, length(tvec)), ylim= c(0, ymax), ylab="Influenza positivity (%)",
-         xlab="Weeks", main=paste(countryName, NOW), bty="l", cex.main=1, cex=2, cex.lab=1, cex.axis=1)#, xaxt="n", yaxs='i', xaxs='i')
-    points(currentYear[tvec], type="l", lwd=2)
-                                        #lvals=length(zoneOld)
-                                        #Error bars:
+         xlab="Weeks", main=paste(countryName, NOW), bty="l", cex.main=1, cex=2, cex.lab=1, cex.axis=1,#, xaxt="n", yaxs='i', xaxs='i')
+         lwd=2)
+    grid(NULL, NULL, col = "lightgray", lty = "dotted",
+         lwd = par("lwd"), equilogs = TRUE)
+    points(currentYear[tvec], type="l", lwd=3, col=col1)
+    #Error bars:
     errorP <- pastAv+1.645*pastSd/nVals
     errorM <- pastAv-1.645*pastSd/nVals
-    points(errorP[tvec], type="l", lty = "dashed")
-    points(errorM[tvec], type="l", lty = "dashed")
+    points(errorP[tvec], type="l", lty = "dashed", lwd=1.5)
+    points(errorM[tvec], type="l", lty = "dashed", lwd=1.5)
     
     
-                                        # From here - DHy1 (past average) - correct?
-    boxplot(peakVec, horizontal=T, add=T, at=(ymax-10), axes=F)
+    # From here - DHy1 (past average) - correct?
+    boxplot(peakVec, horizontal=T, add=T, at=(ymax-10), axes=F, boxwex=6, pch=19, col=col3, flatten=1)
     
+    numYears <- length(peakVec)
+    pastYears <- seq(1, (numYears-1))
     yVals <- jitter(rep((ymax-5),length(peakVec)), 2)
-    points(peakVec, yVals, pch=18, cex=1)
-    text(peakVec, yVals, labels=peakYears, pos=3)
-                                        #axis(side=1, at=seq(1,xmax), labels=peakYears, cex.axis=1, par(xpd=T))
+    points(peakVec[pastYears], yVals[pastYears], pch=4, cex=1, lw=2, col=col2)#pch=18
+    points(peakVec[numYears], max(yVals)+2, pch=4, cex=1, lw=2, col=col1)
     
-    legendtext <- c("Mean of the influenza positivity \nafter aligning at the median peak \nfor past years since 2010", 
-                    "90% CI boundaries", "2017", 
-                    "The boxplot visualizes spread \nof historical peaks")
+    legendtext <- c(NOW, "Mean past positivity \n(alligned)", 
+                    "90% CI", "Peak times \n(shifted)", #Past peaks
+                    "Boxplot visualizes \nhistorical peaks \n")
     legLoc <- c(0,0)
-    if (median(peakVec)>26){
-        legLoc <- c(.6,0)
+    if (min(peakVec)>22){#(median(peakVec)>26){ #This condition can be changed - it's visual
+      legLoc <- c(.7,0)
     }
-    legend("topright", inset=legLoc, legendtext, bty="n", lty= c("solid", "dashed", "solid", NA), lwd=c(1,1,2,NA), cex=.8)
-                                        #dev.off ()
+    legend("topright", inset=legLoc, legendtext, lty= c("solid", "solid", "dashed", NA, NA), lwd=c(3,2,1.5,2,0), cex=.8,
+           pch=c(NA,NA,NA,4,NA), col=c("darkred", "black", "black", "black", NA))
+    #dev.off ()
     
 }
 
@@ -202,11 +187,15 @@ if (FALSE) {
     ## Assumes running in src/R. Change datadir as needed. Select the
     ## syndromic data after loading
     tmp <- load.iiag.data(datadir="data")
-    df <- tmp$synd
-    zones <- read.csv("data/country_list_ISO.csv")
+    df <- tmp$lab#synd
+    zones <- read.csv("data/CountryList.csv")
+    zones <- data.frame(lapply(zones, as.character), stringsAsFactors=FALSE)
+    colnames(zones) <- c("ISO3", "country", "itz", "whoreg", "hemis", "sov")
+    zones$hemis[zones$hemis=="Northern hemishere"] <- "northern"
+    zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
 
     ## Plot country averages
-    ## This line doesn't work, DH and SR working on the functions above at the moment
-    ave_seas_plots(df,zones)
+    average_curve(df,zones)
     
 }
+
