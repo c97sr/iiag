@@ -1,18 +1,19 @@
-ave_seas_plots <- function(
+average_curve <- function(
                            df, # dataframe with output from other routines
                            zones, # dataframe defining transmission zones
-                           plotCategory = "country", #"zone" or "country"
-                           nameArea = "USA", #Select country
-                           YearStart = 2016) {
+                           plotCategory = "country", #"zone" or "country" - add whoregion?
+                           nameArea = "FRA", #Select country (ISO3)
+                           YearStart = 2016) { # First year of season, irresepctive of hemisphere
 
-    #require(gdata)
-    #require(reshape2)
+    require(gdata)
+    require(reshape2)
+    require(plyr)
+    require(stringr)
     #require(ggplot2)
-    #require(plyr)
     #require(zoo)
     #require(epitools)
     #require(Deducer)
-    #require(stringr)
+    
 
     ## Zones needed below here
     if (plotCategory=="country"){
@@ -20,9 +21,11 @@ ave_seas_plots <- function(
         HEMIS <- zones$hemis[zones$ISO3==ISO3ind]
     } else {
         ITZind <- nameArea
-        countries <- zones$Country[zones$itz==ITZind]
-        countries <- levels(countries)
+        countries <- zones$ISO3[zones$itz==ITZind]
+        #countries <- list(unique(countries))#levels(countries)
         ISO3ind <- nameArea #Treat as single country in rest of code
+        HEMIS <- zones$hemis[zones$itz==nameArea]
+        HEMIS <- HEMIS[1]
     }
 
     if (HEMIS=="northern"){
@@ -43,7 +46,8 @@ ave_seas_plots <- function(
 
     if (plotCategory=="country"){
         df2 <- df[df$ISO3==ISO3ind, ]
-        countryName <- df2[1,3]
+        countryName <- zones$country[which(zones$ISO3==ISO3ind)]
+        countryName <- countryName[1]
     } else{ 
         df2 <- df[df$ISO3 %in% countries, ]
         countryName <- nameArea #Better versions of names?
@@ -163,9 +167,9 @@ ave_seas_plots <- function(
                     "90% CI", "Peak times \n(shifted)", #Past peaks
                     "Boxplot visualizes \nhistorical peaks \n")
     legLoc <- c(0,0)
-    #if (median(peakVec)>26){
-    #  legLoc <- c(.7,0)
-    #}
+    if (min(peakVec)>22){#(median(peakVec)>26){ #This condition can be changed - it's visual
+      legLoc <- c(.7,0)
+    }
     legend("topright", inset=legLoc, legendtext, lty= c("solid", "solid", "dashed", NA, NA), lwd=c(3,2,1.5,2,0), cex=.8,
            pch=c(NA,NA,NA,4,NA), col=c("darkred", "black", "black", "black", NA))
     #dev.off ()
@@ -184,20 +188,14 @@ if (FALSE) {
     ## syndromic data after loading
     tmp <- load.iiag.data(datadir="data")
     df <- tmp$lab#synd
-    zones <- read.csv("data/country_list_ISO.csv")
-    #
-    #Produces warnings - OK to ignore:
-    Cancer <- 23.5
-    Capricorn <- -23.5
-    zones$hemis <- zones$Latitude
-    zones$hemis[which(as.numeric(zones$hemis) >= Cancer)] <- "northern"
-    zones$hemis[which(as.numeric(zones$hemis) <= Capricorn)] <- "southern"
-    zones$hemis[which(as.numeric(zones$hemis) < Cancer & as.numeric(zones$hemis) > Capricorn)] <- "tropics"
-    
-    
+    zones <- read.csv("data/CountryList.csv")
+    zones <- data.frame(lapply(zones, as.character), stringsAsFactors=FALSE)
+    colnames(zones) <- c("ISO3", "country", "itz", "whoreg", "hemis", "sov")
+    zones$hemis[zones$hemis=="Northern hemishere"] <- "northern"
+    zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
 
     ## Plot country averages
-    ## This line doesn't work, DH and SR working on the functions above at the moment
-    ave_seas_plots(df,zones)
+    average_curve(df,zones)
     
 }
+
