@@ -71,7 +71,6 @@ if (FALSE) {
     ## fluIliCountryData <- x
     ## save(fluIliCountryData,file="~/tmp/fluIliCountryData.rda")
     
-    
     ## Quick diagnostic plot of the incidence
     ## numeric index for date
     datee=seq(from=2010,by=1/52.17, length.out=dim(x)[1])
