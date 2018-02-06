@@ -1,9 +1,4 @@
-average_curve <- function(
-                           df, # dataframe with output from other routines
-                           zones, # dataframe defining transmission zones
-                           plotCategory = "country", #"zone" or "country" - add whoregion?
-                           nameArea = "USA", #Select country (ISO3)
-                           YearStart = 2016) { # First year of season, irresepctive of hemisphere
+average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
 
     require(gdata)
     require(reshape2)
@@ -13,7 +8,6 @@ average_curve <- function(
     require(ggplot2)
     #require(epitools)
     #require(Deducer)
-    
 
     ## Zones needed below here
     if (plotCategory=="country"){
@@ -183,41 +177,15 @@ average_curve <- function(
     
 }
 
-if (FALSE) {
-
-    ## You may need to change this for where you have downloaded the git repository 
-    ## setwd("~/Dropbox/git/iiag")
-    rm(list=ls(all=TRUE))
-    source("src/R/riley_funcs.r")
-    source("src/R/haw_funcs.r")
-
-    ## Assumes running in src/R. Change datadir as needed. Select the
-    ## syndromic data after loading
-    tmp <- load.iiag.data(datadir="data")
-    df <- tmp$lab#synd
-    dfID <- tmp$ID
-    zones <- read.csv("data/CountryList.csv")
-    zones <- data.frame(lapply(zones, as.character), stringsAsFactors=FALSE)
-    colnames(zones) <- c("ISO3", "country", "itz", "whoreg", "hemis", "sov")
-    zones$hemis[zones$hemis=="Northern hemishere"] <- "northern"
-    zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
-
-    ## Plot country averages
-    average_curve(df,zones)
-    
-}
+################################################################################################################################
 
 #Actually subtype, not strain
-prepStrain <- function(df, 
-                       dfID, 
-                       zones, 
-                       proportion=FALSE){ #df=dfNet
+prepStrain <- function(df, dfID, zones, proportion){ #df=dfNet
   
   library(reshape2)
   library(ggplot2)
   library(plyr)
   
-  assign("proportion", proportion, .GlobalEnv)
   nh <- zones$ISO3[zones$hemis=="northern"]
   sh <- zones$ISO3[zones$hemis=="southern"]
   #tr <- zones$ISO3[zones$hemis=="tropics"]
@@ -227,6 +195,7 @@ prepStrain <- function(df,
   
   ################################
   
+  #If incorporating ILI, writes a csv of time-series (without subtyping):
   if (proportion==FALSE){
     dfid <- dfID[which(dfID$MEASURE_CODE=="ILI_CASES" & dfID$AGEGROUP_CODE=="All"), ]
     dfid <- data.frame(dfid$ISO3, dfid$ISO_YEAR, dfid$ISO_WEEK, dfid$ValueNumeric)
@@ -276,15 +245,13 @@ prepStrain <- function(df,
                      "V1.BNOTDETERMINED", "V1.BVICTORIA", "V1.BYAMAGATA", 
                      "V1.AH7N9")]
   #To date, 2x H1N1, 0x non-subtypable/other subtype ********
-  
+  assign("dfout", dfout, .GlobalEnv) #Better as function output?
   write.csv(dfout, "strainYear.csv")
 }
 
-################################
+################################################################################################################################
 
-extractCountry <- function(dfall, 
-                           iso3="USA", 
-                           splitOther=FALSE){
+extractCountry <- function(dfall, iso3, splitOther){
   
 country <- dfall[dfall$code==iso3, ]
 rownames(country) <- country$year
@@ -326,12 +293,62 @@ if (proportion==TRUE){
 }
 dat$row <- seq_len(nrow(dat))
 dat2 <- melt(dat, id.vars = "row")
+dat2$variable <- substr(dat2$variable, 2, 5)
+rnames <- rownames(dat)
 
-ggplot(dat2, aes(x=variable, y=value, fill=as.factor(row))) + 
+dat2$row <- rnames[as.numeric(dat2$row)]
+
+p <- ggplot(dat2, aes(x=variable, y=value, fill=as.factor(row))) + 
   geom_bar(stat="identity") +
   xlab("\nYear of season start") +
   ylab("Proportion of samples\n") +
   scale_fill_manual(values=palette)
+p <- p + guides(fill=guide_legend(title="Subtype"))
+p
 }
 
+################################################################################################################################
 
+if (FALSE) {
+  
+  ## You may need to change this for where you have downloaded the git repository:
+  #setwd("~/Dropbox/git/iiag")
+  rm(list=ls(all=TRUE))
+  source("src/R/riley_funcs.r")
+  source("src/R/haw_funcs.r")
+  
+  ## Install if necessary:
+  #install.packages(gdata)
+  #install.packages(reshape2)
+  #install.packages(plyr)
+  #install.packages(stringr)
+  #install.packages(zoo)
+  #install.packages(ggplot2)
+  
+  ## Assumes running in src/R. Change datadir as needed, otherwise leave this bit:
+  tmp <- load.iiag.data(datadir="data")
+  df <- tmp$lab
+  dfID <- tmp$synd
+  zones <- read.csv("data/CountryList.csv")
+  zones <- data.frame(lapply(zones, as.character), stringsAsFactors=FALSE)
+  colnames(zones) <- c("ISO3", "country", "itz", "whoreg", "hemis", "sov")
+  zones$hemis[zones$hemis=="Northern hemishere"] <- "northern"
+  zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
+  
+  ################################
+  ## Inputs - if above has run once, just run from here:
+  plotCategory <- "country" #"zone" or "country" - add whoregion?
+  nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
+  YearStart = 2016 #First year of required season
+  ## For subytypes by season:
+  proportion <- TRUE
+  iso3 <- "USA" #Must be a country (ISO3) for now be a country
+  splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
+  #################################
+  
+  ## Plot desired average curve:
+  average_curve(df, zones, plotCategory, nameArea, YearStart)
+  ## Plot distribution of subtypes by year - comment out to remove second plot:
+  prepStrain(df, dfID, zones, proportion)
+  extractCountry(dfout, iso3, splitOther)
+}
