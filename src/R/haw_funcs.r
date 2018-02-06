@@ -303,7 +303,7 @@ p <- ggplot(dat2, aes(x=variable, y=value, fill=as.factor(row))) +
   xlab("\nYear of season start") +
   ylab("Proportion of samples\n") +
   scale_fill_manual(values=palette)
-p <- p + guides(fill=guide_legend(title="Subtype"))
+p <- p + guides(fill=guide_legend(title="Subtype")) + ggtitle(paste(iso3, "historic profile", sep = " ", collapse = NULL))
 p
 }
 
