@@ -1,3 +1,8 @@
+WRONG VERSION OF THIS 
+CODE - LOOK IN THE SRC.R FOLDER!!!!!!!!
+I can't delete it - Steven has to do the honours
+David
+
 average_curve <- function(
                            df, # dataframe with output from other routines
                            zones, # dataframe defining transmission zones
@@ -177,6 +182,11 @@ average_curve <- function(
 }
 
 if (FALSE) {
+  
+  WRONG VERSION OF THIS 
+CODE - LOOK IN THE SRC.R FOLDER!!!!!!!!
+I can't delete it - Steven has to do the honours
+David
 
     ## You may need to change this for where you have downloaded the git repository 
     ## setwd("~/Dropbox/git/iiag")
