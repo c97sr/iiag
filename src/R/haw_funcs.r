@@ -318,12 +318,12 @@ if (FALSE) {
   source("src/R/haw_funcs.r")
   
   ## Install if necessary:
-  #install.packages(gdata)
-  #install.packages(reshape2)
-  #install.packages(plyr)
-  #install.packages(stringr)
-  #install.packages(zoo)
-  #install.packages(ggplot2)
+  #install.packages("gdata")
+  #install.packages("reshape2")
+  #install.packages("plyr")
+  #install.packages("stringr")
+  #install.packages("zoo")
+  #install.packages("ggplot2")
   
   ## Assumes running in src/R. Change datadir as needed, otherwise leave this bit:
   tmp <- load.iiag.data(datadir="data")
@@ -336,13 +336,16 @@ if (FALSE) {
   zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
   
   ################################
-  ## Inputs - if above has run once, just run from here:
+  ## Inputs - if above has run once, just run from here.
+  
+  ## For average curve:
   plotCategory <- "country" #"zone" or "country" - add whoregion?
   nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
   YearStart = 2016 #First year of required season
+  
   ## For subytypes by season:
-  proportion <- TRUE
-  iso3 <- "USA" #Must be a country (ISO3) for now be a country
+  proportion <- TRUE #False witll cross-multiple with ILI incidence
+  iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
   splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
   #################################
   
