@@ -1,7 +1,7 @@
-## Load up the data as two large dataframes.
-## Possible refinements are to add in date ranges and to get it to construct
-## older snapshots of the data using the date string or prevvious version,
-## next-previous and so on.
+#' Load up the data as two large dataframes.
+#' Possible refinements are to add in date ranges and to get it to construct
+#' older snapshots of the data using the date string or prevvious version,
+#' next-previous and so on.
 load.iiag.data <- function(datadir="data") {
 
     ## Define the strings for all the files needed and read in the 6 files
@@ -52,7 +52,7 @@ extract.incidence <- function(
     ## Setup the week scale in a format consistent with the week format
     ## in the data and cope with 53-week years. Needs the list of 53 week years
     ## extending in both directions.
-    dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",dfId$ISO_WEEK),sep="-")
+    dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02s",dfId$ISO_WEEK),sep="-")
     min(dfId$ISO_YEAR)
     yrs53Weeks <- c(2009,2015,2020)
     currentYear <- minYear
@@ -130,6 +130,7 @@ extract.incidence <- function(
 }
 
 ## Script used for development and testing
+## Think about moving this to be in the notes directory and use spin
 if (FALSE) {
     
     ## Clear objects form memory for debugging and source this file
@@ -161,6 +162,7 @@ if (FALSE) {
     )
     
     ## Quick diagnostic plot
+    #' Up to here
     plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
     points(x[,"DEU"]+1,type="l",col="blue")
     points(x[,"USA"]+1,type="l",col="green")
