@@ -52,6 +52,8 @@ extract.incidence <- function(
     ## Setup the week scale in a format consistent with the week format
     ## in the data and cope with 53-week years. Needs the list of 53 week years
     ## extending in both directions.
+    ## Perhaps should have a few lines to get rid of data NAs and avoid a warning
+    ## at the next line?
     dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",as.numeric(dfId$ISO_WEEK)),sep="-")
     min(dfId$ISO_YEAR)
     yrs53Weeks <- c(2009,2015,2020)
@@ -131,6 +133,8 @@ extract.incidence <- function(
 
 ## Script used for development and testing
 ## Think about moving this to be in the notes directory and use spin
+## Next need to get the historical data working and transfer these notes here to a
+## separate stad alone script file
 if (FALSE) {
     
     ## Clear objects form memory for debugging and source this file
@@ -165,7 +169,6 @@ if (FALSE) {
     )
     
     ## Quick diagnostic plot
-    #' Up to here
     plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
     points(x[,"DEU"]+1,type="l",col="blue")
     points(x[,"USA"]+1,type="l",col="green")
