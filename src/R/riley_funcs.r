@@ -48,11 +48,11 @@ extract.incidence <- function(
                               minYear = 2000,
                               maxYear = 2018
 ) {
-    
+
     ## Setup the week scale in a format consistent with the week format
     ## in the data and cope with 53-week years. Needs the list of 53 week years
     ## extending in both directions.
-    dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02s",dfId$ISO_WEEK),sep="-")
+    dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",as.numeric(dfId$ISO_WEEK)),sep="-")
     min(dfId$ISO_YEAR)
     yrs53Weeks <- c(2009,2015,2020)
     currentYear <- minYear
@@ -108,7 +108,7 @@ extract.incidence <- function(
             }
             if (cur_ind_rtn <= max_ind_rtn) {
                 val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
-                val_df <- tmpdf$ValueNumeric[cur_ind_df]
+                val_df <- as.numeric(tmpdf$ValueNumeric[cur_ind_df])
                 if (!is.na(val_df)) {
                     if (is.na(val_rtn)) {
                         rtnmat[cur_ind_rtn,cur_iso3] <- val_df
@@ -153,6 +153,9 @@ if (FALSE) {
     ## zeros for the UK and germany. But need to eyeball specific lines of
     ## the data to be sure its a real problem. Data for other countries seems
     ## to come out OK.
+    
+    ## This seems to be broken now for some reason?
+    ## That must be current
     x <- extract.incidence(
         df,
         minYear=2010,
