@@ -8,7 +8,9 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     require(ggplot2)
     #require(epitools)
     #require(Deducer)
-
+    
+    #### Extract desired country/zone from complete data. Retain hemosphere for season timing.
+  
     ## Zones needed below here
     if (plotCategory=="country"){
         ISO3ind <- nameArea #Select country
@@ -32,7 +34,9 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     }
 
     ################################
-
+    
+    #### Create data frame with columns year/week/code/value, in chronological order.
+  
     ## measures <- c("SPEC_PROCESSED_NB", "DECTECTED_NB")
     ## res <- res[which(res$MEASURE_CODE %in% measures), ]
     df <- df[which(df$MEASURE_CODE=="SPEC_PROCESSED_NB" |
@@ -50,13 +54,20 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     df2 <- data.frame(df2$ISO_YEAR, df2$ISO_WEEK, df2$MEASURE_CODE, df2$ValueNumeric)
     colnames(df2) <- c("year", "week", "code", "value")
     
+    #### If using ITZ, aggregate over countries.
+    
     if (plotCategory=="zone"){
         ## df2 < -aggregate(df2, by=list(year=df2$year, week=df2$week, code=df2$code), mean, na.rm=TRUE)
         dfx <- ddply(df2, c("year", "week", "code"), fun=mean)
     }
     
+    #### Reshape data so there is one row per week.
+    
     df2 <- reshape(df2, idvar=c("year", "week"), timevar=c("code"), direction="wide")
                                         #Should land in chronological order ********
+    
+    #### Use perventage positive (3 point moving average) as measure of incidence:
+    
     df2$percPos <- df2[, 3]/df2[, 4]*100
     df2$percPosMov <- rollapply(df2$percPos, 3, mean, align="center", fill=T)
     df2 <- df2[, c(1,2,5,6)]
@@ -71,15 +82,20 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
         df2$sweek <- df2$week #Includes tropics for now ********
     }
     df2$sweek[df2$sweek==0] <- 53#sweek 14 not always there
+    
+    #### Reshape data so there is one column per week.
+    #### This is like the Excel pivot table in Julia's original code.
                                         #
     df3 <- data.frame(df2$syear, df2$sweek, df2$percPos)
     colnames(df3) <- c("syear", "sweek", "mov")
                                         #df3 <- ddply(df3, "syear")
     df3 <- reshape(df3, idvar="syear", timevar="sweek", direction="wide")
                                         #
-    df3[df3=="NaN"]=NA #Discovered in Fiji
+    df3[df3=="NaN"]=NA #Some "NaN" where "NA" desired - discovered in Fiji
+    
+    #### Organise columns into chronological order and allign peaks.
                                         #
-    rownames(df3) <- df3[, 1]
+    rownames(df3) <- df3[, 1]#Row names as required
     df3 <- df3[, -1]
     nWeeks <- ncol(df3)
     if (HEMIS=="northern"){
@@ -88,11 +104,16 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     peakVal <- apply(df3, 1, max, na.rm=TRUE)
     peakInd <- max.col(df3[, seq(1,nWeeks)], "first")
     latest <- max(peakInd)
-    ##Deal with week 53 (14):
+    
+    #### Deal with week 53 (week 14 of season).
+    
     w14 <- which(is.na(df3[, 14]))
     df3[w14,seq(14,52)] <- df3[w14, seq(15,52)]
     df3[w14,53]=NA
-    ##Allign to latest/mean over all:
+    
+    #### Peaks are initially alligned to latest value, which can be stored more intuitively in a table.
+    #### Peaks are shifted to median value in plot.
+    
     nyears <- nrow(df3)
     maxVal <- c(nyears,1,0)
     maxInd <- maxVal
@@ -118,6 +139,9 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     }
     df4 <- as.data.frame(df4)
     rownames(df4) <- rownames(df3)
+    
+    #### Extract current year and compute past average.
+    
     yearList <- as.numeric(rownames(df4))
     currentYear <- which(yearList==YearStart)
     pastAv <- as.numeric(apply(df4[seq(2, (currentYear-1)), ], 2, mean, na.rm=TRUE))
@@ -128,6 +152,9 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     ################################
     
     #Plot:
+    
+    #### Lots of this code just tweaks the plot asthetically.
+    
     col1 <- "darkred"#(.667,.224,.224)
     col2 <- "black"#rgb(0,0,0)#(.831,.416,.416)
     col3 <- rgb(1,1,1)#(1,.667,.667)
@@ -195,7 +222,7 @@ prepStrain <- function(df, dfID, zones, proportion){ #df=dfNet
   
   ################################
   
-  #If incorporating ILI, writes a csv of time-series (without subtyping):
+  #### If incorporating ILI, writes a csv of time-series (without subtyping):
   if (proportion==FALSE){
     dfid <- dfID[which(dfID$MEASURE_CODE=="ILI_CASES" & dfID$AGEGROUP_CODE=="All"), ]
     dfid <- data.frame(dfid$ISO3, dfid$ISO_YEAR, dfid$ISO_WEEK, dfid$ValueNumeric)
@@ -312,12 +339,15 @@ p
 if (FALSE) {
   
   ## You may need to change this for where you have downloaded the git repository:
+  ## Set working directory:
   #setwd("~/Dropbox/git/iiag")
+  ## Clear workspace:
   rm(list=ls(all=TRUE))
+  ## Source necessary scripts:
   source("src/R/riley_funcs.r")
   source("src/R/haw_funcs.r")
   
-  ## Install if necessary:
+  ## You will need these packages - install if necessary:
   #install.packages("gdata")
   #install.packages("reshape2")
   #install.packages("plyr")
@@ -336,22 +366,23 @@ if (FALSE) {
   zones$hemis[zones$hemis=="Southern hemisphere"] <- "southern"
   
   ################################
-  ## Inputs - if above has run once, just run from here.
+  # INPUTS - if above has run once, just run from here.
   
   ## For average curve:
-  plotCategory <- "country" #"zone" or "country" - add whoregion?
+  plotCategory <- "country" #"zone" (ITZ) or "country" - add whoregion?
   nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
-  YearStart = 2016 #First year of required season
-  
-  ## For subytypes by season:
-  proportion <- TRUE #False witll cross-multiple with ILI incidence
-  iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
-  splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
-  #################################
-  
+  YearStart = 2009 #First year of required season
   ## Plot desired average curve:
   average_curve(df, zones, plotCategory, nameArea, YearStart)
-  ## Plot distribution of subtypes by year - comment out to remove second plot:
-  prepStrain(df, dfID, zones, proportion)
-  extractCountry(dfout, iso3, splitOther)
+  
+  
+  #################################
+  
+  ## Option to plot distribution of subtypes by year:
+  ## Comment out next 5 lines if no bar plot desired.
+  #proportion <- FALSE #False will cross-multiple with ILI incidence, true considers only "percentage positive"
+  #iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
+  #splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
+  #prepStrain(df, dfID, zones, proportion)
+  #extractCountry(dfout, iso3, splitOther)
 }
