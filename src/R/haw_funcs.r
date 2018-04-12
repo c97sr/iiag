@@ -21,7 +21,7 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
         #countries <- list(unique(countries))#levels(countries)
         ISO3ind <- nameArea #Treat as single country in rest of code
         HEMIS <- zones$hemis[zones$itz==nameArea]
-        HEMIS <- HEMIS[1]
+        HEMIS <- HEMIS[2]
     }
 
     if (HEMIS=="northern"){
@@ -192,7 +192,7 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     points(peakVec[numYears], max(yVals)+2, pch=4, cex=1, lw=2, col=col1)
     
     legendtext <- c(NOW, "Mean past positivity \n(alligned)", 
-                    "90% CI", "Peak times \n(shifted)", #Past peaks
+                    "90% CI", "Peak times", #Past peaks
                     "Boxplot visualizes \nhistorical peaks \n")
     legLoc <- c(0,0)
     if (min(peakVec)>22){#(median(peakVec)>26){ #This condition can be changed - it's visual
@@ -506,9 +506,9 @@ if (FALSE) {
   # INPUTS - if above has run once, just run from here.
   
   ## For average curve:
-  plotCategory <- "country" #"zone" (ITZ) or "country" - add whoregion?
-  nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
-  YearStart = 2009 #First year of required season
+  plotCategory <- "zone" #"zone" (ITZ) or "country" - add whoregion?
+  nameArea <- "Southern Asia" #Select country (ISO3) or ITZ (ITZ name as in table)
+  YearStart = 2017 #First year of required season
   ## Plot desired average curve:
   average_curve(dfNet, zones, plotCategory, nameArea, YearStart)
   
@@ -518,11 +518,11 @@ if (FALSE) {
   
   ## Option to plot distribution of subtypes by year:
   ## Comment out next 5 lines if no bar plot desired.
-  #proportion <- FALSE #False will cross-multiple with ILI incidence, true considers only "percentage positive"
-  #iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
-  #splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
-  #prepStrain(df, dfID, zones, proportion)
-  #extractCountry(dfout, iso3, splitOther)
+  proportion <- TRUE #False will cross-multiple with ILI incidence, true considers only "percentage positive"
+  iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
+  splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
+  prepStrain(dfNet, dfID, zones, proportion)
+  extractCountry(dfout, iso3, splitOther)
   
   ################################
   # SARIMA:
@@ -542,7 +542,7 @@ if (FALSE) {
   arima1 <- 1 #AR
   arima2 <- 1 #Diff
   arima3 <- 0 #MA
-  seasonal1 <- 1 #Seasonal AR
+  seasonal1 <- 0 #Seasonal AR
   seasonal2 <- 1 #Seasonal diff
   seasonal3 <- 1 #Seasonal MA
   seasonPeriod <- 52 #Weeks - 52, 26 for tropics?
