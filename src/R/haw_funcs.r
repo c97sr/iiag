@@ -356,7 +356,7 @@ predictFlu <- function(dfNet, dfID, incidenceMeasure, zones, nameArea, plotACF,
     fluid1c <- dfx[dfx$ISO3==cName, ]
     fluid1c <- fluid1c[fluid1c$AGEGROUP_CODE=="All", ]
   }
-  #
+  
   if (incidenceMeasure=="sero"){
     df <- dfx[which(dfx$MEASURE_CODE=="SPEC_PROCESSED_NB" |
                       dfx$VIRUSTYPE_CODE=="ALL_INF"), ]
@@ -400,10 +400,10 @@ predictFlu <- function(dfNet, dfID, incidenceMeasure, zones, nameArea, plotACF,
     fluid1is <- aggregate(fluidis$value, by=list(fluidis$year, fluidis$week), FUN=sum, na.rm=TRUE)
     names(fluid1is)[1:3] <- paste(c("year", "week", "value"))
   }
-  #
+  
   ##From here, the term "fluid" appears in variable names, even if data is fluNet. 
   ##This is because code was initially written with just fluID in mind.
-  #
+  
   #Order correctly:
   fluid1is <- fluid1is[order(fluid1is$week), ]
   fluid1is <- fluid1is[order(fluid1is$year), ]
@@ -416,20 +416,20 @@ predictFlu <- function(dfNet, dfID, incidenceMeasure, zones, nameArea, plotACF,
     pacf(forACF, main="Data: PACF")#, main="Partial autocorrelation function")
     #grid(nx = NULL, ny = nx, col = "lightgray", lty = "dotted", lwd = par("lwd"), equilogs = TRUE)
   }
-  #
+  
   #Disguard most recent:
   lf <- length(fluid1is$value)
   if(lf < recentData) stop("Not enough data: predict shorter time period")
   realInd <- seq(lf-recentData+1, lf)
   REAL <- fluid1is[realInd, ]
   fluid1is <- fluid1is[-realInd, ]
-  #
+  
   disguardStart <- lf-recentData-numWeeks
   if (disguardStart>0){
     fluid1is <- fluid1is[-c(1:disguardStart), ]
   }
   lf <- length(fluid1is$value)
-  #
+  
   #ARIMA:
   fluid.fit <- arima(fluid1is$value, order=c(arima1,arima2,arima3), seasonal=list(order=c(seasonal1,seasonal2,seasonal3), period=seasonPeriod), include.mean=FALSE)
   #print(fluid.fit)
@@ -474,6 +474,8 @@ predictFlu <- function(dfNet, dfID, incidenceMeasure, zones, nameArea, plotACF,
 
 if (FALSE) {
   
+  ################################
+  # SET WORKSPACE:
   ## You may need to change this for where you have downloaded the git repository:
   ## Set working directory:
   #setwd("~/Dropbox/git/iiag")
@@ -506,22 +508,22 @@ if (FALSE) {
   # INPUTS - if above has run once, just run from here.
   
   ## For average curve:
-  plotCategory <- "zone" #"zone" (ITZ) or "country" - add whoregion?
-  nameArea <- "Southern Asia" #Select country (ISO3) or ITZ (ITZ name as in table)
-  YearStart = 2017 #First year of required season
+  plotCategory <- "country" #"zone" (ITZ) or "country" - add whoregion?
+  nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
+  YearStart = 2016 #First year of required season
   ## Plot desired average curve:
   average_curve(dfNet, zones, plotCategory, nameArea, YearStart)
   
   
   #################################
   # SUBTYPES BY YEAR/SEASON:
+  # INPUTS - if above has run once, just run from here.
   
-  ## Option to plot distribution of subtypes by year:
-  ## Comment out next 5 lines if no bar plot desired.
   proportion <- TRUE #False will cross-multiple with ILI incidence, true considers only "percentage positive"
   iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
   splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
   prepStrain(dfNet, dfID, zones, proportion)
+  ## Plot distribution of subtypes by year:
   extractCountry(dfout, iso3, splitOther)
   
   ################################
@@ -531,13 +533,13 @@ if (FALSE) {
   ## For SARIMA:
   #plotCategory <- "country" #"zone" (ITZ) or "country" - add whoregion?
   nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
-  numYears <- 4
+  numYears <- 8
   numWeeks <- 52*numYears #Total number of weeks to use
-  recentData <- 20 #Remove most recent weeks
+  recentData <- 16 #Remove most recent weeks
   #Predict this many weeks:
-  thisFar <- 28
-  incidenceMeasure <- "case"#"sero" or "case"
-  #
+  thisFar <- 24
+  incidenceMeasure <- "sero"#"sero" (percentage positive) or "case" (ILI+SARI) - these can be changed
+  
   #(S)ARIMA parameters:
   arima1 <- 1 #AR
   arima2 <- 1 #Diff
@@ -546,7 +548,7 @@ if (FALSE) {
   seasonal2 <- 1 #Seasonal diff
   seasonal3 <- 1 #Seasonal MA
   seasonPeriod <- 52 #Weeks - 52, 26 for tropics?
-  #
+  
   plotACF <- TRUE
   #Run the function:
   predictFlu(dfNet, dfID, incidenceMeasure, zones, nameArea, plotACF, 
