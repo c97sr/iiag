@@ -86,11 +86,15 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
     #### Reshape data so there is one column per week.
     #### This is like the Excel pivot table in Julia's original code.
                                         #
-    df3 <- data.frame(df2$syear, df2$sweek, df2$percPos)
+    df3 <- data.frame(df2$syear, df2$sweek, df2$percPosMov)
     colnames(df3) <- c("syear", "sweek", "mov")
-                                        #df3 <- ddply(df3, "syear")
+    #df3 <- ddply(df3, "syear")
+    
+    df3 <- df3[order(df3$sweek), ]#16/4
+    df3 <- df3[order(df3$syear), ]#16/4
+    
     df3 <- reshape(df3, idvar="syear", timevar="sweek", direction="wide")
-                                        #
+    #
     df3[df3=="NaN"]=NA #Some "NaN" where "NA" desired - discovered in Fiji
     
     #### Organise columns into chronological order and allign peaks.
@@ -102,7 +106,9 @@ average_curve <- function(df, zones, plotCategory, nameArea, YearStart){
         df3 <- df3[, c(seq(40,nWeeks), seq(1,39))] #Generalise, just in case ********
     }
     peakVal <- apply(df3, 1, max, na.rm=TRUE)
-    peakInd <- max.col(df3[, seq(1,nWeeks)], "first")
+    df3nona <- df3
+    df3nona[is.na(df3)==1]=-1
+    peakInd <- max.col(df3nona[, seq(1,nWeeks)], "first")
     latest <- max(peakInd)
     
     #### Deal with week 53 (week 14 of season).
@@ -520,7 +526,7 @@ if (FALSE) {
   # INPUTS - if above has run once, just run from here.
   
   proportion <- TRUE #False will cross-multiple with ILI incidence, true considers only "percentage positive"
-  iso3 <- "USA" #Must be a country (ISO3) for now, not a zone
+  iso3 <- "DNK" #Must be a country (ISO3) for now, not a zone
   splitOther <- FALSE #Divide non-H1/H3 between these 2 (for "tidier" plots)
   prepStrain(dfNet, dfID, zones, proportion)
   ## Plot distribution of subtypes by year:
@@ -532,7 +538,7 @@ if (FALSE) {
   
   ## For SARIMA:
   #plotCategory <- "country" #"zone" (ITZ) or "country" - add whoregion?
-  nameArea <- "USA" #Select country (ISO3) or ITZ (ITZ name as in table)
+  nameArea <- "DNK" #Select country (ISO3) or ITZ (ITZ name as in table)
   numYears <- 8
   numWeeks <- 52*numYears #Total number of weeks to use
   recentData <- 16 #Remove most recent weeks
@@ -547,7 +553,7 @@ if (FALSE) {
   seasonal1 <- 0 #Seasonal AR
   seasonal2 <- 1 #Seasonal diff
   seasonal3 <- 1 #Seasonal MA
-  seasonPeriod <- 52 #Weeks - 52, 26 for tropics?
+  seasonPeriod <- 26 #Weeks - 52, 26 for tropics?
   
   plotACF <- TRUE
   #Run the function:
