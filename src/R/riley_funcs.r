@@ -3,10 +3,8 @@
 #' older snapshots of the data using the date string or prevvious version,
 #' next-previous and so on.
 load.iiag.data <- function(datadir="data") {
-  
   ## Define the strings for all the files needed and read in the 6 files
-  fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""),
-                       header=FALSE)
+  fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
   fid_old_0 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
   fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
   fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
