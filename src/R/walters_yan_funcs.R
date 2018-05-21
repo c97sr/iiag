@@ -6,6 +6,8 @@
 #' @param flu_data matrix with flu incidence data
 #' @param country_code character vector of length 1: 3-letter country code
 #' @param year numeric vector of length 1: year to extract
+#' @param start_at_27 logical.  if TRUE, season starts from week 27 and ends at week 26.
+#' If FALSE, season starts from week 1 and ends at week 52/53.
 #' @return data frame with three columns:
 #' t: numeric vector of length 52/53 (depending on the year): 
 #' index running from 1 to 52/53
@@ -17,16 +19,32 @@
 #' 
 extract_incidence <- function(flu_data,
                               country_code = "ISR",
-                              year = 2016) {
-  flu_data <- as.data.frame(flu_data)
+                              year = 2016,
+                              start_at_27 = TRUE) {
+  if(!is.data.frame(flu_data)) {
+    flu_data <- as.data.frame(flu_data)
+  }
   year_names <- rownames(flu_data)
-  # start plotting at week 27 of the current year
-  row_name_start <- paste0(year, "-27") 
-  # stop plotting at week 26 of the next year
-  row_name_end <- paste0(year + 1, "-26")
+  if(start_at_27) {
+    # start plotting at week 27 of the current year
+    row_name_start <- paste0(year, "-27") 
+    # stop plotting at week 26 of the next year
+    row_name_end <- paste0(year + 1, "-26")
+  } else {
+    # start plotting at week 1 of the current year
+    row_name_start <- paste0(year, "-01") 
+    # stop plotting at week 52/53 of the current year
+    row_name_end <- paste0(year, "-53")
+    # if no week 53, stop at week 52
+    if(!(row_name_end %in% year_names)) {
+      row_name_end <- paste0(year, "-52")
+    }
+  }
+
   # find the corresponding weeks in the data
   row_index_start <- which(rownames(flu_data) == row_name_start)
   row_index_end <- which(rownames(flu_data) == row_name_end)
+
   # extrac the week number and incidence for those weeks
   incidence <- flu_data[seq(row_index_start, row_index_end), 
                         colnames(flu_data) == country_code]
