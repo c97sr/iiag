@@ -44,3 +44,4 @@ notes/*.pdf
 notes/figure/*
 src/R/*.html
 src/R/*.md
+.project
