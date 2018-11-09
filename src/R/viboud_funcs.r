@@ -84,13 +84,11 @@ if (FALSE) {
     legend(x="topright",legend=c("USA","NLD","IRL","NZL"),
            col=c("red","blue","green","purple"),lwd=2)
     
-
     ## Getting basic geographic country info 
     ## All world countries
     ## setwd("H://FluNet/Data/")
     countrydesc=read.table("data/country_list_ISO.csv", sep=',',
                            header=TRUE)
-
 
     ## countries that have robust ILI data in x
     isos=colnames(x)
@@ -103,9 +101,7 @@ if (FALSE) {
 
     idx.lat=order(countries$Latitude)
 
-
     ## Time series heatmap
-
     nwk=dim(x)[1]
     x2.sc=apply(x2, 2, scale)
     colnames(x2.sc)
@@ -127,7 +123,6 @@ if (FALSE) {
     axis(2, at=seq(0,1,,dim(x2.sc)[2]),
          labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=0.5)
     abline(v=seq(2010,2018),lty=1,col="grey")
-
 
     par(mar=c(5,0,1,5))
     image.scale(x2.sc, col=heat.colors(nbreaks)[nbreaks:1], breaks=breaksu,

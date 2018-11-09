@@ -134,6 +134,96 @@ extract.incidence <- function(
   
 }
 
+## Function to create a database of seasons from the incidence data 
+extract.seasons <- function(
+		inc_arr, 
+		country_info, 
+		midwknorth=1, 
+		midwksouth=27, 
+		midleadweeks=8,
+		midlagweeks=16) {
+	
+  ## Extract the number of seasons from the database
+  
+  
+  tmp <- unlist(lapply(strsplit(rownames(inc_arr),split="-"),as.numeric))
+  noelements <- length(tmp)
+  noweeks <- noelements / 2
+  yrwk <- matrix(tmp,nrow=noweeks,ncol=2,byrow=TRUE)
+  colnames(yrwk) <- c("yr","wk")
+  veccountries <- colnames(inc_arr)
+  
+  ## Setup the return data structures. 
+  ## We need to create a lookup table of seasons first, then create a 2D matrix of the 
+  ## correct form and then run through eac country putting in the 
+  ## correct data. It should have country ID, season type, with 1 for northern and 2 
+  ## for southern. and then
+  weeksperseason <- 1 + midleadweeks + midlagweeks
+  
+  rtnarr <- matrix(nrow=0,ncol=weeksperseason)
+  rtnlu <- data.frame(country=NULL, year=NULL, seastype=NULL)
+  tmprow <- data.frame(country=NA, year=NA, seastype=NA)
+  
+  for (lab in veccountries) {
+	  
+	  ## Give a season type based on information about the country
+	  ## for now just northern or southern
+	  cind <- match(lab,country_info$ISO3,nomatch=-1)
+	  if (cind < 0) stop("failed to match country code")
+	  clat <- country_info$Latitude[cind]
+	  if (clat > 0) {
+	    
+      ## Northern hemisphere
+      midweek <- midwknorth
+      seasontype <- 1
+		  
+	  } else if (clat < 0) {
+      
+      ## Southern hemisphere
+      midweek <- midwksouth
+      seasontype <- 2
+		  
+	  } else {
+      
+      # But we could define custom weeks for each season
+      stop("Nothing here right now.")
+      
+    }
+	  
+    ## Main loop for the cutting out the seasons
+	  for (w in 1:noweeks) {
+		  if (yrwk[w,"wk"] == midweek) {
+        
+        if (((w - midleadweeks) > 0) && (w + midlagweeks <= noweeks)) {
+          
+          ## Add the season details to the season lookup table
+          ## Can easily add in more season stats here
+          tmprow$country <- lab
+          tmprow$year <- yrwk[w,"yr"]
+          tmprow$seastype <- seasontype
+          rtnlu <- rbind(rtnlu,tmprow)
+          
+          ## Add the incidence itself to the incidence array
+          ## Use rbind to make sure we do only one pass and to get match row sizes
+          rtnarr <- rbind(rtnarr, inc_arr[(w - midleadweeks):(w + midlagweeks), lab])
+
+        } 
+      }
+	  }
+    
+  }
+  
+  list(inc = rtnarr, lu = rtnlu)
+  
+}
+
+
+## For interactive debugging put these flags into   
+## RUNALL <- FALSE
+## PREAMBLE <- FALSE
+## CURRENT <- FALSE
+## PREANDCURRENT <- FALSE
+
 ## Script used for development and testing
 ## Think about moving this to be in the notes directory and use spin
 ## Next need to get the historical data working and transfer these notes here to a
@@ -170,7 +260,7 @@ if (FALSE) {
     sel_ag = c("All"),
     sel_measure = c("ILI_CASES")
   )
-  
+
   ## Quick diagnostic plot
   plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
   points(x[,"DEU"]+1,type="l",col="blue")
