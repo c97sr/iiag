@@ -161,8 +161,8 @@ extract.seasons <- function(
   weeksperseason <- 1 + midleadweeks + midlagweeks
   
   rtnarr <- matrix(nrow=0,ncol=weeksperseason)
-  rtnlu <- data.frame(country=NULL, year=NULL, seastype=NULL)
-  tmprow <- data.frame(country=NA, year=NA, seastype=NA)
+  rtnlu <- data.frame(country=NULL, year=NULL, seastype=NULL, nonas=NULL, nozeros=NULL, mean=NULL, total=NULL, max=NULL)
+  tmprow <- data.frame(country=NA, year=NA, seastype=NA, nonas=NA, nozeros=NA, mean=NA, total=NA, max=NA)
   
   for (lab in veccountries) {
 	  
@@ -196,16 +196,29 @@ extract.seasons <- function(
         
         if (((w - midleadweeks) > 0) && (w + midlagweeks <= noweeks)) {
           
+          ## Extract the incidence for the correct weeks
+          thisyrinc <- inc_arr[(w - midleadweeks):(w + midlagweeks), lab]
+          
           ## Add the season details to the season lookup table
           ## Can easily add in more season stats here
           tmprow$country <- lab
           tmprow$year <- yrwk[w,"yr"]
           tmprow$seastype <- seasontype
+          tmprow$nonas <- sum(is.na(thisyrinc))
+          tmprow$nozeros <- sum(thisyrinc < 0.1, na.rm=TRUE)
+          tmprow$mean <- mean(thisyrinc,na.rm=TRUE)
+          tmprow$total <- sum(thisyrinc,na.rm=TRUE)
+          if (tmprow$nonas < weeksperseason) {
+            tmprow$max <- max(thisyrinc,na.rm=TRUE)
+          } else {
+            tmprow$max <- -1
+          }
+          
           rtnlu <- rbind(rtnlu,tmprow)
           
           ## Add the incidence itself to the incidence array
           ## Use rbind to make sure we do only one pass and to get match row sizes
-          rtnarr <- rbind(rtnarr, inc_arr[(w - midleadweeks):(w + midlagweeks), lab])
+          rtnarr <- rbind(rtnarr, thisyrinc)
 
         } 
       }
@@ -214,6 +227,37 @@ extract.seasons <- function(
   }
   
   list(inc = rtnarr, lu = rtnlu)
+  
+}
+
+#' A function to take the two part database and return a forecast for that time
+#' By crude, I mean, really crude. This needs to at least ave a precalc function
+#' that creates a matrix that is then called. Ah well.
+fm.null.hist.vvcrude <- function(ctry,yr,wk,lutab,inctab) {
+  
+  ## Extract a vector of incidence for this week
+  tmpinc <- inctab[(lutab$country==ctry),wk]
+  tmplu <- lutab[(lutab$country==ctry),]
+  yrind <- match(yr,tmplu$year,nomatch=-1)
+  if (yrind < 0) stop("didn't match the year properly")
+  vecotheryrs <- tmpinc[-yrind]
+  if (sum(is.na(vecotheryrs)==length(vecotheryrs))) {
+    stop("Need to think about this a bit")
+  }
+	rtn <- mean(vecotheryrs,rm.na=TRUE)
+
+  ## Return the simple estimate
+  rtn
+  
+}
+
+ac.skill.crude <- function(tabObs,tabCast,tablu,tol=0.2,thresh=0.05) {
+  
+  ## Up to debugging the lines below
+  browser()
+  
+  # Set thresholds for the different countries
+  inccountries <- names(table(tablu$country))
   
 }
 
@@ -267,3 +311,5 @@ if (FALSE) {
   points(x[,"USA"]+1,type="l",col="green")
   
 }
+
+
