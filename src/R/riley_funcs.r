@@ -254,62 +254,21 @@ fm.null.hist.vvcrude <- function(ctry,yr,wk,lutab,inctab) {
 ac.skill.crude <- function(tabObs,tabCast,tablu,tol=0.2,thresh=0.05) {
   
   ## Up to debugging the lines below
-  browser()
+  ## browser()
   
   # Set thresholds for the different countries
   inccountries <- names(table(tablu$country))
   
+  0
+  
 }
 
-
-## For interactive debugging put these flags into   
-## RUNALL <- FALSE
-## PREAMBLE <- FALSE
-## CURRENT <- FALSE
-## PREANDCURRENT <- FALSE
-
-## Script used for development and testing
-## Think about moving this to be in the notes directory and use spin
-## Next need to get the historical data working and transfer these notes here to a
-## separate stad alone script file
+## Code fragments for interactive sessions
 if (FALSE) {
   
-  ## Clear objects form memory for debugging and source this file
-  ## setwd("~/Dropbox/git/iiag/")
-  rm(list=ls(all=TRUE))
-  source("src/R/riley_funcs.r")
-  
-  ## Assumes running in src/R. Change datadir as needed. Select the
-  ## syndromic data after loading
-  tmp <- load.iiag.data(datadir="data")
-  df <- tmp$synd
-  dfDev <- tmp$syndDev
-  
-  ## Need a bit more of a play to see what is there from before 2010
-  dim(df)
-  dim(dfDev)
-  
-  ## Extract ILI cass for UK, USA and germany for all age groups
-  ## Doesn't seem quite right at the moment because of the blanks and
-  ## zeros for the UK and germany. But need to eyeball specific lines of
-  ## the data to be sure its a real problem. Data for other countries seems
-  ## to come out OK.
-  
-  ## This seems to be broken now for some reason?
-  ## That must be current
-  x <- extract.incidence(
-    df,
-    minYear=2010,
-    sel_iso3 = c("GBR","USA","DEU"),
-    sel_ag = c("All"),
-    sel_measure = c("ILI_CASES")
-  )
+  ## Can put some dev code here, but need to move it to the notes sirectory as soon as
+  ## possible. Nothing here right now.
 
-  ## Quick diagnostic plot
-  plot(x[,"GBR"]+1,type="l",col="red",ylim=c(0,max(x,na.rm=TRUE)),ylog=TRUE)
-  points(x[,"DEU"]+1,type="l",col="blue")
-  points(x[,"USA"]+1,type="l",col="green")
-  
 }
 
 

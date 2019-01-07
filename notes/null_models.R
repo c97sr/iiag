@@ -1,18 +1,24 @@
-#' ** Make a database of season incidences from the WHO data
+#' # Make a database of season incidences from the WHO data
 
-#' Set the current working directory if needed
-## setwd("~/Dropbox/git/iiag/")
+#' ## Preamble to setup the session
+
+#' Set the current working directory if needed when working interactively and
+#' check the working directry for when spinning.
+## setwd("~/Dropbox/git/iiag/notes")
+getwd()
 
 #' As always, remove all objects fromt eh workspace before starting
 rm(list=ls(all=TRUE))
 
 #' Source the function files and libraries we will need
-source("src/R/riley_funcs.r")
+source("../src/R/riley_funcs.r")
 
+#' ## Load up the datasets
 #' Follow Cecile Viboud's script to load up data only from countries with data reorted 
 #' for at least 50% of weeks, even before we look at the properties of individual seasons
+#+ tidy = TRUE 
 minprop <- 0.5
-dataflu=load.iiag.data()
+dataflu=load.iiag.data(datadir="../data")
 x <- extract.incidence(
 		dataflu$synd,
 		minYear=2010,
@@ -29,8 +35,9 @@ x <- extract.incidence(
 )
 
 #' Load up the country info file
-countrydesc <- read.table("data/country_list_ISO.csv", sep=',', header=TRUE)
+countrydesc <- read.table("../data/country_list_ISO.csv", sep=',', header=TRUE)
 
+#' ## Create a database of seasons
 #' Then extract individual seasons taking care with the week 53 / 52 issue
 #' A year name for a season is the year in which the mid week appears, so,
 #' for example, the 2017 northern year contains week 1 20017.
@@ -64,11 +71,12 @@ noepi <- dim(lu)[1]
 noweeks <- dim(obs)[2]
 dim(obs)
 
-#' Up to here and now need to create some null models. Using the general
+#' ## Define a null historical model
+#' Using the general
 #' approach that a forecast function only returns a point estimate at this
 #' stage and the first two arguments must be country and week.
 #' Quickly check that it works for one week!
-fm.null.hist.vvcrude("ISL",2015,15,lu,inc)
+fm.null.hist.vvcrude("ISL",2015,15,lu,obs)
 
 #' Then create an empty matrix of the same shape as the observation matrix and
 #' cycle through it making a forecast
@@ -77,10 +85,11 @@ for (r in 1:noepi) {
   curctry <- lu$country[r]
   curyear <- lu$year[r]
   for (w in 1:noweeks) {
-    cast[r,w] <- fm.null.hist.vvcrude(curctry,curyear,w,lu,inc) 
+    cast[r,w] <- fm.null.hist.vvcrude(curctry,curyear,w,lu,obs) 
   }
 }
 
+#' ## Define a crude skill measure
 #' Now need to assign accurate or not to every place where we made a forecast
 #' Here the NAs have to come back
 skill <- ac.skill.crude(obs,cast,lu)
