@@ -36,9 +36,13 @@ breaks, horiz=TRUE, ylim=NULL, xlim=NULL, ...){
 if (FALSE) {
 
     rm(list=ls(all=TRUE))
-    ## setwd() 
+    ## setwd("E:/Dropbox/git/iiag") 
     source("src/R/riley_funcs.r")
     source("src/R/viboud_funcs.r")
+	# library("devtools")
+	# install_github("c97sr/idd")
+	library("idd")
+	
     dataflu=load.iiag.data()
 
     ## Extract data for all countries
@@ -107,28 +111,30 @@ if (FALSE) {
     colnames(x2.sc)
 
     ## plot
+	pdf_fig_proof(file="E:/tmp/routput.pdf",pw=7,ph=10)
     nbreaks=11 ##nb of color breaks; seems to work for most flu examples
     ## breaks based on quantiles
     breaksq=c(quantile(x2.sc,p=seq(0,1,length.out=nbreaks+1),na.rm=T)) 
     ## breaks defined by user --here putting more weight on high flu incidences
     breaksu=c(min(x2.sc,na.rm=T),-1.5,-1,-.5, 0, .5, 1,1.5, 2,4,6,10)  
 
-    layout(matrix(c(1,2), nrow=1, ncol=2), widths=c(4,1), heights=c(4))
-    layout.show(2)
-    par(mar=c(4,6.5,1,1))
+    #layout(matrix(c(1,2), nrow=1, ncol=2), widths=c(4,1), heights=c(4))
+    #layout.show(2)
+    #par(mar=c(4,6.5,1,1))
     image(x=datee, z=as.matrix(x2.sc[,idx.lat]),
           col=heat.colors(nbreaks)[nbreaks:1], 
           breaks=breaksu,yaxt="n",xlab="Weeks")
 
     axis(2, at=seq(0,1,,dim(x2.sc)[2]),
          labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=0.5)
-    abline(v=seq(2010,2018),lty=1,col="grey")
-
+    abline(v=seq(2010,2018),lty=1,col="grey",xpd=TRUE)
+	dev.off()
+	
     par(mar=c(5,0,1,5))
     image.scale(x2.sc, col=heat.colors(nbreaks)[nbreaks:1], breaks=breaksu,
                 horiz=FALSE, yaxt="n", xaxt="n", xlab="", ylab="")
     axis(4)
     mtext("Scaled ILI cases", side=4, line=2)
     box()
-
+	dev.off()
 }

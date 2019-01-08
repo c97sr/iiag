@@ -3,19 +3,27 @@
 #' ## Preamble to setup the session
 
 #' Set the current working directory if needed when working interactively and
-#' check the working directry for when spinning.
+#' check the working directry for when spinning. To spin this, it needs the 
+#' knitr package and then spin("thisfilename.r").
 ## setwd("~/Dropbox/git/iiag/notes")
 getwd()
 
-#' As always, remove all objects fromt eh workspace before starting
+#' As always, remove all objects fromt the workspace before starting
 rm(list=ls(all=TRUE))
 
-#' Source the function files and libraries we will need
+#' Source the function files and libraries we will need. Install SR's idd package
+#' from github if needed.
 source("../src/R/riley_funcs.r")
+# library("devtools")
+# install_github("c97sr/idd")
+library("idd")
+library("formatR")
 
 #' ## Load up the datasets
-#' Follow Cecile Viboud's script to load up data only from countries with data reorted 
-#' for at least 50% of weeks, even before we look at the properties of individual seasons
+
+#' Follow Cecile Viboud's script to load up data only from countries with data 
+#' entered for at least 50% of weeks, even before we look at the properties of 
+#' individual seasons.
 #+ tidy = TRUE 
 minprop <- 0.5
 dataflu=load.iiag.data(datadir="../data")
@@ -34,18 +42,20 @@ x <- extract.incidence(
 		sel_measure = c("ILI_CASES")
 )
 
-#' Load up the country info file
-countrydesc <- read.table("../data/country_list_ISO.csv", sep=',', header=TRUE)
+#' Load the country info file with ISO country names.
+countrydesc <- read.table(
+		"../data/country_list_ISO.csv", sep=',', header=TRUE
+)
 
 #' ## Create a database of seasons
-#' Then extract individual seasons taking care with the week 53 / 52 issue
+#' Then extract individual seasons taking care with the week 53 / 52 issue.
 #' A year name for a season is the year in which the mid week appears, so,
 #' for example, the 2017 northern year contains week 1 20017.
 tmp <- extract.seasons(x,countrydesc)
 tmpinc <- tmp$inc
 tmplu <- tmp$lu
 
-#' Then look at the distribution of epidemic properties.
+#' Then look at the distribution of some epidemic properties.
 table(tmplu$seastype)
 hist(tmplu$total, breaks = c(-0.5,0.5,9999999999),plot=FALSE)
 plot(1+tmplu$total,1+tmplu$max,log="xy")
@@ -60,7 +70,8 @@ tmp2inc <- tmpinc[filtermask,]
 dim(tmp2inc)
 
 #' Now check for the number of countries and filter for only those with enough
-#' good seasons. This can e melded up into the other criteria above (maybe)
+#' good seasons. This could, in the future, be melded up into the other criteria 
+#' above.
 countrycounts <- table(tmp2lu$country)
 ctryinc <- names(countrycounts[countrycounts > 5])
 length(ctryinc)
@@ -72,9 +83,8 @@ noweeks <- dim(obs)[2]
 dim(obs)
 
 #' ## Define a null historical model
-#' Using the general
-#' approach that a forecast function only returns a point estimate at this
-#' stage and the first two arguments must be country and week.
+#' Using the general approach that a forecast function only returns a point 
+#' estimate at this stage and the first two arguments must be country and week.
 #' Quickly check that it works for one week!
 fm.null.hist.vvcrude("ISL",2015,15,lu,obs)
 
