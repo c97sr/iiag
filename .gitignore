@@ -42,6 +42,8 @@ notes/*.aux
 notes/*.log
 notes/*.pdf
 notes/figure/*
+notes/*.md
+notes/*.html
 src/R/*.html
 src/R/*.md
 .project
