@@ -36,14 +36,15 @@ breaks, horiz=TRUE, ylim=NULL, xlim=NULL, ...){
 if (FALSE) {
 
     rm(list=ls(all=TRUE))
-    ## setwd("E:/Dropbox/git/iiag") 
+    ## setwd("E:/Dropbox/git/iiag")
+    ## setwd("~/Dropbox/git/iiag")
     source("src/R/riley_funcs.r")
     source("src/R/viboud_funcs.r")
 	# library("devtools")
 	# install_github("c97sr/idd")
 	library("idd")
 	
-    dataflu=load.iiag.data()
+    dataflu=load.iiag.data.new()
 
     ## Extract data for all countries
     x <- extract.incidence(
