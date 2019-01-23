@@ -37,38 +37,40 @@ load.iiag.data <- function(datadir="data") {
   
 }
 
+## Setup to inport the latest data. Looks a little cumbersome, but is
+## probably better done like this to be explicit about every file. It will only need
+## changing ~ once a year.
 load.iiag.data.new <- function(datadir="data") {
-  ## Define the strings for all the files needed and read in the 6 files
-  fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
-  fid_old_0 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
-  fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
-  fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
-  fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
-  fnet_old_0 <- read.csv(paste(datadir,"/2000-2009_FluNetData.csv",sep=""))
-  fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
-  fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
   
-  ## There is a slight issue with the name in the current versions of the data
-  ## These lines make sure that the column title for the ISO3 column is
-  ## consistent.
-  ## Below also takes care of a missing header row for current snapshot
-  names(fid_old_1)[1] <- names(fnet_this)[1]
-  names(fid_old_2)[1] <- names(fnet_this)[1]
-  names(fnet_old_1)[1] <- names(fnet_this)[1]
-  names(fnet_old_2)[1] <- names(fnet_this)[1]
-  names(fid_this) <- names(fid_old_1)
+  ## Define the strings for all the files needed and read in the 6 files
+  fid_this <- read.csv(paste(datadir,"/2019-2020_FluIDData.csv",sep=""))
+  fid_old_0 <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
+  fid_old_1 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
+  fid_old_2 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
+  fid_old_3 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
+  fnet_this <- read.csv(paste(datadir,"/2019-2020_FluNetData.csv",sep=""))
+  fnet_old_0 <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
+  fnet_old_1 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
+  fnet_old_2 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
+  fnet_old_3 <- read.csv(paste(datadir,"/2000-2009_FluNetData.csv",sep=""))
+  
+  ## When setting this up, check the names with lines like
+  ## names(fnet_this) == names(fnet_old_3)
+  
+  ## Consider taking care of a missing header rows if needed
+  ## names(fid_old_1)[1] <- names(fnet_this)[1]
+  ## names(fid_old_2)[1] <- names(fnet_this)[1]
+  ## names(fnet_old_1)[1] <- names(fnet_this)[1]
+  ## names(fnet_old_2)[1] <- names(fnet_this)[1]
+  ## names(fid_this) <- names(fid_old_1)
   
   ## Use rbind to make the large tables. Should throw an error if the column
   ## names change in the future.
-  dfIdXX_dev <- rbind(fid_old_0,fid_old_1,fid_old_2,fid_this)
-  dfNet_dev <- rbind(fnet_old_0,fnet_old_1,fnet_old_2,fnet_this)
-  
-  ## Not currently including the 00 to 09 data as it breaks the test plots
-  dfIdXX <- rbind(fid_old_1,fid_old_2,fid_this)
-  dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_this)
+  dfId <- rbind(fid_this,fid_old_0,fid_old_1,fid_old_2,fid_old_3)
+  dfNet <- rbind(fnet_this,fnet_old_0,fnet_old_1,fnet_old_2,fnet_old_3)
   
   ## Return the two datasets as a list
-  list(lab=dfNet,synd=dfIdXX,labDev=dfNet_dev,syndDev=dfIdXX_dev)
+  list(lab=dfNet,synd=dfId)
   
 }
 

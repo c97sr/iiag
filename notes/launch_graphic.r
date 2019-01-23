@@ -13,6 +13,10 @@ Sys.time()
 #' As always, remove all objects fromt the workspace before starting.
 rm(list=ls(all=TRUE))
 
+#' Set key global assumptions
+start_year <- 2010
+max_prop_not_reported <- 0.5
+
 #' Source the function files and libraries we will need. Install SR's idd package
 #' from github if needed.
 # install_github("c97sr/idd")
@@ -24,36 +28,41 @@ source("../src/R/riley_funcs.r")
 source("../src/R/viboud_funcs.r")
 
 #' Extract the data from the data directory
-dataflu=load.iiag.data.new(datadir="../data")
+dataflu <- load.iiag.data(datadir="../data")
+## dataflu_new <- load.iiag.data.new(datadir="E:/Dropbox/data/who_flu")
 
 #' Extract data for all countries
 x <- extract.incidence(
     dataflu$synd,
-    minYear=2010,
+    minYear=start_year,
     sel_iso3 = unique(dataflu$synd$ISO3),
     sel_ag = c("All"),
     sel_measure = c("ILI_CASES"))
 
 #' Identify countries with robust ILI by looking at sum of ILI cases by country.
+#' Compare old and new data
 colSums(is.na(x))
 
 #' Calculate the proportion of missing weeks by country
-colSums(is.na(x))/dim(x)[1]
+hist(colSums(is.na(x))/dim(x)[1],breaks=seq(0,1,by=1/20))
 
 #' List of countries with more than 50% of weeks of complete data
-sel_iso=names(which(colSums(is.na(x))/dim(x)[1]<.5))
+sel_iso=names(which(colSums(is.na(x))/dim(x)[1] < max_prop_not_reported))
 
 #' Reextract data for set of more complete countries
 x <- extract.incidence(
     dataflu$synd,
-    minYear=2010,
+    minYear=start_year,
     sel_iso3 = sel_iso,
     sel_ag = c("All"),
     sel_measure = c("ILI_CASES")
 )
 
+#' Total number of ILI episodes reported here are
+sum(x,na.rm=TRUE)
+
 #' Setup a date timeline
-datee=seq(from=2010,by=1/52.17, length.out=dim(x)[1])
+datee=seq(from=start_year,by=1/52.17, length.out=dim(x)[1])
 
 #' Load up the country data for latitude etc 
 countrydesc=read.table("../data/country_list_ISO.csv", sep=',',header=TRUE)
@@ -68,19 +77,19 @@ x2.sc=apply(x2, 2, scale)
 colnames(x2.sc)
 
 #' Plot the mian chart
-pdf_fig_proof(file="./figure/iiag_heatmap.pdf",pw=7,ph=10)
+pdf_fig_proof(file="./figure/iiag_heatmap.pdf",pw=13.2,ph=18)
   nbreaks=11 ## nb of color breaks; seems to work for most flu examples
   breaksu=c(min(x2.sc,na.rm=T),-1.5,-1,-.5, 0, .5, 1,1.5, 2,4,6,10)  
   image(x=datee, z=as.matrix(x2.sc[,idx.lat]),
     col=heat.colors(nbreaks)[nbreaks:1], 
     breaks=breaksu,yaxt="n",xlab="Weeks")
   axis(2, at=seq(0,1,,dim(x2.sc)[2]),
-    labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=0.5)
+    labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=1.0)
   abline(v=seq(2010,2018),lty=1,col="grey",xpd=TRUE)
 dev.off()
 
 #' Plot the scale
-pdf_fig_proof(file="./figure/iiag_heatmap_scale.pdf",pw=7,ph=10)
+pdf_fig_proof(file="./figure/iiag_heatmap_scale.pdf",pw=2,ph=7)
   image.scale(x2.sc, col=heat.colors(nbreaks)[nbreaks:1], breaks=breaksu,
     horiz=FALSE, yaxt="n", xaxt="n", xlab="", ylab="")
   axis(4)
