@@ -1,4 +1,7 @@
-#' # Summary heat chart of who data
+#' # Summary heat chart of fluID data
+#' This R file can be converted into a nicely formatted html page with a 
+#' figures subdirectory by using the command "spin("this_file_name")" from
+#' the package knitr.
 
 #' Taken almost directly from a script written by Cecile Viboud in early 2018.
 
