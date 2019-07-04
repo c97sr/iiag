@@ -6,7 +6,7 @@
 Sys.time()
 
 #' Set the current working directory if needed when working interactively and
-#' check the working directry for when spinning. To spin this, it needs the 
+#' check the working directry for when spinning. To spin this, it needs the
 #' knitr package and then spin("thisfilename.r").
 ## setwd("~/Dropbox/git/iiag/notes")
 
@@ -24,10 +24,10 @@ source("../src/R/riley_funcs.r")
 
 #' ## Load up the datasets
 
-#' Follow Cecile Viboud's script to load up data only from countries with data 
-#' entered for at least 50% of weeks, even before we look at the properties of 
+#' Follow Cecile Viboud's script to load up data only from countries with data
+#' entered for at least 50% of weeks, even before we look at the properties of
 #' individual seasons.
-#+ tidy = TRUE 
+#+ tidy = TRUE
 minprop <- 0.5
 dataflu=load.iiag.data.new(datadir="../data")
 x <- extract.incidence(
@@ -66,14 +66,14 @@ hist(tmplu$nozeros,breaks=seq(-0.5,26.5))
 hist(tmplu$nonas,breaks=seq(-0.5,26.5))
 
 #' And use these to decide on some cutoffs then create a filtered table
-filtermask <- (tmplu$nonas < 11) & (tmplu$nozeros < 11) & (tmplu$total > 300) 
+filtermask <- (tmplu$nonas < 11) & (tmplu$nozeros < 11) & (tmplu$total > 300)
 sum(filtermask)
 tmp2lu <- tmplu[filtermask,]
 tmp2inc <- tmpinc[filtermask,]
 dim(tmp2inc)
 
 #' Now check for the number of countries and filter for only those with enough
-#' good seasons. This could, in the future, be melded up into the other criteria 
+#' good seasons. This could, in the future, be melded up into the other criteria
 #' above.
 countrycounts <- table(tmp2lu$country)
 ctryinc <- names(countrycounts[countrycounts > 5])
@@ -86,7 +86,7 @@ noweeks <- dim(obs)[2]
 dim(obs)
 
 #' ## Define a null historical model
-#' Using the general approach that a forecast function only returns a point 
+#' Using the general approach that a forecast function only returns a point
 #' estimate at this stage and the first two arguments must be country and week.
 #' Quickly check that it works for one week!
 fm.null.hist.vvcrude("ISL",2015,15,lu,obs)
@@ -98,7 +98,7 @@ for (r in 1:noepi) {
   curctry <- lu$country[r]
   curyear <- lu$year[r]
   for (w in 1:noweeks) {
-    cast[r,w] <- fm.null.hist.vvcrude(curctry,curyear,w,lu,obs) 
+    cast[r,w] <- fm.null.hist.vvcrude(curctry,curyear,w,lu,obs)
   }
 }
 

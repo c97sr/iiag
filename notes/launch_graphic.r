@@ -1,5 +1,5 @@
 #' # Summary heat chart of fluID data
-#' This R file can be converted into a nicely formatted html page with a 
+#' This R file can be converted into a nicely formatted html page with a
 #' figures subdirectory by using the command "spin("this_file_name")" from
 #' the package knitr.
 
@@ -9,7 +9,7 @@
 Sys.time()
 
 #' Set the current working directory if needed when working interactively and
-#' check the working directry for when spinning. To spin this, it needs the 
+#' check the working directry for when spinning. To spin this, it needs the
 #' knitr package and then spin("thisfilename.r").
 ## setwd("~/Dropbox/git/iiag/notes")
 
@@ -31,7 +31,8 @@ source("../src/R/riley_funcs.r")
 source("../src/R/viboud_funcs.r")
 
 #' Extract the data from the data directory
-dataflu <- load.iiag.data(datadir="../data")
+datadir <- "../../iiag_data/data"
+dataflu <- load.iiag.data.new(datadir=datadir)
 ## dataflu_new <- load.iiag.data.new(datadir="E:/Dropbox/data/who_flu")
 
 #' Extract data for all countries
@@ -67,8 +68,10 @@ sum(x,na.rm=TRUE)
 #' Setup a date timeline
 datee=seq(from=start_year,by=1/52.17, length.out=dim(x)[1])
 
-#' Load up the country data for latitude etc 
-countrydesc=read.table("../data/country_list_ISO.csv", sep=',',header=TRUE)
+#' Load up the country data for latitude etc
+countrydesc=read.table(
+    paste(datadir,"/country_list_ISO.csv",sep=""), sep=',',header=TRUE
+)
 isos=colnames(x)
 x2=x[,order(isos)] ## sorting countries in ILI matrix by ISO3  for later use
 countries=countrydesc[ (countrydesc$ISO3 %in% isos), ]
@@ -82,12 +85,12 @@ colnames(x2.sc)
 #' Plot the mian chart
 pdf_fig_proof(file="./figure/iiag_heatmap.pdf",pw=13.2,ph=18)
   nbreaks=11 ## nb of color breaks; seems to work for most flu examples
-  breaksu=c(min(x2.sc,na.rm=T),-1.5,-1,-.5, 0, .5, 1,1.5, 2,4,6,10)  
+  breaksu=c(min(x2.sc,na.rm=T),-1.5,-1,-.5, 0, .5, 1,1.5, 2,4,6,10)
   image(x=datee, z=as.matrix(x2.sc[,idx.lat]),
-    col=heat.colors(nbreaks)[nbreaks:1], 
+    col=heat.colors(nbreaks)[nbreaks:1],
     breaks=breaksu,yaxt="n",xlab="Weeks")
-  axis(2, at=seq(0,1,,dim(x2.sc)[2]),
-    labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=1.0)
+##  axis(2, at=seq(0,1,,dim(x2.sc)[2]),
+##    labels=colnames(x2.sc)[idx.lat],las=1,cex.axis=1.0)
   abline(v=seq(2010,2018),lty=1,col="grey",xpd=TRUE)
 dev.off()
 
