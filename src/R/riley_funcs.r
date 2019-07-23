@@ -2,7 +2,8 @@
 #' Possible refinements are to add in date ranges and to get it to construct
 #' older snapshots of the data using the date string or prevvious version,
 #' next-previous and so on.
-load.iiag.data <- function(datadir="data") {
+load.iiag.data <- function(datadir="../iiag_data/data") {
+
     ## Define the strings for all the files needed and read in the 6 files
     fid_this <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
     fid_old_0 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
@@ -37,11 +38,10 @@ load.iiag.data <- function(datadir="data") {
 
 }
 
-## Setup to inport the latest data. Looks a little cumbersome, but is
-## probably better done like this to be explicit about every file. It will only need
-## changing ~ once a year.
-load.iiag.data.new <- function(datadir="data") {
-
+#' Setup to inport the latest data. Looks a little cumbersome, but is
+#' probably better done like this to be explicit about every file. It will only need
+#' changing ~ once a year.
+load.iiag.data.new <- function(datadir="../iiag_data/data") {
 
     ## Helper function to fix some header names to be used below
     fix_headers <- function(x) {
@@ -56,14 +56,13 @@ load.iiag.data.new <- function(datadir="data") {
         newnames
     }
 
-
     ## Define the strings for all the files needed and read in the 6 files
     fid_this <- read.csv(paste(datadir,"/2019-2020_FluIDData.csv",sep=""))
-    fid_old_3 <- read.csv(paste(datadir,"/2017-2018_FluIDData.csv",sep=""))
+    fid_old_3 <- read.csv(paste(datadir,"/2017-2018_FluIDData_20190110.csv",sep=""))
     fid_old_2 <- read.csv(paste(datadir,"/2014-2016_FluIDData.csv",sep=""))
     fid_old_1 <- read.csv(paste(datadir,"/2010-2013_FluIDData.csv",sep=""))
     fid_old_0 <- read.csv(paste(datadir,"/2000-2009_FluIDData.csv",sep=""))
-    fnet_this <- read.csv(paste(datadir,"/2019-2020_FluNetData.csv",sep=""))
+    fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData_20190110.csv",sep=""))
     fnet_old_3 <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
     fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
     fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
@@ -73,25 +72,22 @@ load.iiag.data.new <- function(datadir="data") {
     names(fid_this) <- fix_headers(fid_this)
     names(fid_old_1) <- fix_headers(fid_old_1)
     names(fid_old_2) <- fix_headers(fid_old_2)
-    ## names(fid_this) == names(fid_old_2)
-
-    ## browser()
-
-    ## Fix names for flu net
-    names(fnet_this) <- fix_headers(fnet_this)
+    names(fid_old_3) <- fix_headers(fid_old_3)
     names(fnet_old_1) <- fix_headers(fnet_old_1)
     names(fnet_old_2) <- fix_headers(fnet_old_2)
-    ## names(fnet_this) == names(fnet_old_3)
-
-    ## When setting this up, check the names with lines like
-    ## Consider taking care of a missing header rows if needed
-    ## Use the helper function if needed
-    ## names(fid_this) == names(fid_this)
+    names(fnet_old_3) <- fix_headers(fnet_old_3)
+    names(fnet_this) <- fix_headers(fnet_this)
 
     ## Use rbind to make the large tables. Should throw an error if the column
     ## names change in the future.
-    dfId <- rbind(fid_this,fid_old_3,fid_old_2,fid_old_1,fid_old_0)
-    dfNet <- rbind(fnet_this,fnet_old_3,fnet_old_2,fnet_old_1,fnet_old_0)
+    ## dfId <- rbind(fid_old_0,fid_old_2,fid_old_2,fid_old_3,fid_this)
+    ## dfNet <- rbind(fnet_old_0,fnet_old_2,fnet_old_2,fnet_old_3,fnet_this)
+    dfId <- rbind(fid_old_1,fid_old_2,fid_old_3,fid_this)
+    dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_old_3,fnet_this)
+
+    ## Sort both dataframe just incase
+    dfId <- dfId[order(dfId$ISO2,dfId$ISO_YEAR,dfId$ISO_WEEK),]
+    dfNet <- dfNet[order(dfNet$ISO2,dfNet$ISO_YEAR,dfNet$ISO_WEEK),]
 
     ## Return the two datasets as a list
     list(lab=dfNet,synd=dfId)
