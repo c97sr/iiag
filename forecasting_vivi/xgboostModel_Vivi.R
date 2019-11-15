@@ -1,4 +1,4 @@
-library('idd') # WHO influenza-likeness-illness data
+library('idd') # WHO influenza-likeness-illness data; idd package is not available (for R version 3.6.1)
 library('ggplot2') # transform integer numbers to categorical variable
 library('xgboost') # boosted regression tree
 library('formattable') # formatting on data frames
@@ -19,29 +19,224 @@ library("rsvg")
 library("DiagrammeRsvg") # multi tree plot
 library("data.table") # convert data frame to data table
 library("aweek") # convert discrete time variable into contious variable
+library("knitr")
 
 rm(list = ls(all = TRUE))
 
 # Load WHO FluID dataset
-data("fluIliCountryData")
+#' Becuase idd package is not aviable for R version 3.6.1, I downloaded dataset fluIliCountryData.rda in the 
+#' idd and loaded in the Rstudio directly.
 
+load(file = "fluIliCountryData.rda")
+
+# data("fluIliCountryData")
+
+#' Load country list for WHO data.
 countryISO <- read.csv("C:/Users/hw3616/Desktop/Imperial/Project1_Forecasting/Project_Coding/iiag/data_old/country_list_ISO.csv")
 
+#' Load WHO FluID data set.
+#' From 2010 week 1 to 2018 week 9 
+load.iiag.data.fluid <- function(datadir="../iiag_data/data_old/") {
+  
+  ## Helper function to fix some header names to be used below
+  fix_headers <- function(x) {
+    curnames <- names(x)
+    newnames <- curnames
+    if (!is.na(match("ISO_Week",curnames))) {
+      newnames[match("ISO_Week",curnames)] <- "ISO_WEEK"
+    }
+    if (!is.na(match("ï..ISO3",curnames))) {
+      newnames[match("ï..ISO3",curnames)] <- "ISO3"
+    }
+    newnames
+  }
 
-# excluding COK, NRU, NIU, WSM,SLB,TON,ASM,PYF,TKL,PCN
-# because their observations are less than 50%
-# 57 countries left, 11 countries excluded
-# ISO3 code for countries
-country_code <- colnames(fluIliCountryData)[-c(8,31,35,45,50,56,58,64,65,66,68)]
+  ## Define the strings for all the files needed and read 
+  # fid_this <- read.csv(paste(datadir,"/2019-2020_FluIDData.csv",sep=""))
+  fid_old_3 <- read.csv(paste0(datadir,"/2017-2018_FluIDData.csv",sep=""))
+  fid_old_2 <- read.csv(paste0(datadir,"/2014-2016_FluIDData.csv",sep=""))
+  fid_old_1 <- read.csv(paste0(datadir,"/2010-2013_FluIDData.csv",sep=""))
+  fid_old_0 <- read.csv(paste0(datadir,"/2000-2009_FluIDData.csv",sep=""))
+  # fnet_this <- read.csv(paste(datadir,"/2017-2018_FluNetData_20190110.csv",sep=""))
+  # fnet_old_3 <- read.csv(paste(datadir,"/2017-2018_FluNetData.csv",sep=""))
+  # fnet_old_2 <- read.csv(paste(datadir,"/2014-2016_FluNetData.csv",sep=""))
+  # fnet_old_1 <- read.csv(paste(datadir,"/2010-2013_FluNetData.csv",sep=""))
+  # fnet_old_0 <- read.csv(paste(datadir,"/2000-2009_FluNetData.csv",sep=""))
+  
+  ## Fix names for flu id
+  # names(fid_this) <- fix_headers(fid_this)
+  names(fid_old_1) <- fix_headers(fid_old_1)
+  names(fid_old_2) <- fix_headers(fid_old_2)
+  names(fid_old_3) <- fix_headers(fid_old_3)
+  # names(fnet_old_1) <- fix_headers(fnet_old_1)
+  # names(fnet_old_2) <- fix_headers(fnet_old_2)
+  # names(fnet_old_3) <- fix_headers(fnet_old_3)
+  # names(fnet_this) <- fix_headers(fnet_this)
 
-country_idd <- c()
-for (i in 1:length(country_code)){
-  index <- grep(country_code[i],countryISO$ISO3)
-  tmp <- countryISO[index,]
-  country_idd <- rbind(country_idd, tmp)
+  ## Use rbind to make the large tables. Should throw an error if the column
+  ## names change in the future.
+  # dfId <- rbind(fid_old_0,fid_old_2,fid_old_2,fid_old_3,fid_this)
+  # dfNet <- rbind(fnet_old_0,fnet_old_2,fnet_old_2,fnet_old_3,fnet_this)
+  dfId <- rbind(fid_old_1,fid_old_2,fid_old_3)
+  # dfNet <- rbind(fnet_old_1,fnet_old_2,fnet_old_3,fnet_this)
+
+  ## Sort both dataframe just incase
+  dfId <- dfId[order(dfId$ISO2,dfId$ISO_YEAR,dfId$ISO_WEEK),]
+  # dfNet <- dfNet[order(dfNet$ISO2,dfNet$ISO_YEAR,dfNet$ISO_WEEK),]
+  
+  ## Return the two datasets as a list
+  # list(lab=dfNet,synd=dfId)
+  dfId
 }
 
-#### XGBooost ####
+# WHO dataset
+fluWHO <- load.iiag.data.fluid(datadir = "C:/Users/hw3616/Desktop/Imperial/Project1_Forecasting/Project_Coding/iiag/data_old")
+
+## Take the raw WHO country database and extract weekly incidence
+extract.incidence.who <- function( dfId,
+                                   sel_iso3,
+                                   sel_ag,
+                                   sel_measure,
+                                   minYear,
+                                   maxYear) {
+  
+  ## Setup the week scale in a format consistent with the week format
+  ## in the data and cope with 53-week years. Needs the list of 53 week years
+  ## extending in both directions.
+  ## Perhaps should have a few lines to get rid of data NAs and avoid a warning
+  ## at the next line?
+  dfId$yrweek <- paste(dfId$ISO_YEAR,sprintf("%02d",as.numeric(dfId$ISO_WEEK)),sep="-")
+  min(dfId$ISO_YEAR)
+  yrs53Weeks <- 2015
+  currentYear <- minYear
+  vecWeekScale <- NULL
+  while (currentYear <= maxYear) {
+    if (currentYear %in% yrs53Weeks) {
+      max_week <- 53
+    } else {
+      max_week <- 52
+    }
+    vecWeekScale <- c(vecWeekScale,
+                      paste(currentYear,sprintf("%02d",1:max_week),sep="-"))
+    currentYear <- currentYear +1
+  }
+  
+  ## Define the return matrix for the function
+  sel_weeks <- vecWeekScale
+  rtnmat <- matrix(data=NA,nrow=length(sel_weeks),ncol=length(sel_iso3))
+  colnames(rtnmat) <- sel_iso3
+  rownames(rtnmat) <- sel_weeks
+  
+  ## Start outer loop over the country codes
+  for (cur_iso3 in sel_iso3) {
+    
+    ## Define criteria and subset the data
+    crit1 <- (dfId$ISO3 == cur_iso3)
+    if(!("AGEGROUP_CODE" %in% colnames(dfId))) {
+      crit2 <- TRUE
+    } else {
+      crit2 <- (dfId$AGEGROUP_CODE %in% sel_ag)
+    }
+    
+    crit3 <- (dfId$MEASURE_CODE %in% sel_measure)
+    tmpdf <- dfId[crit1 & crit2 & crit3,]
+    tmpdf <- tmpdf[order(tmpdf$yrweek),]
+    
+    ## Setup the preconditions for the nested while loops
+    max_ind_rtn <- dim(rtnmat)[1]
+    max_ind_df <- dim(tmpdf)[1]
+    cur_ind_rtn <- 1
+    cur_ind_df <- 1
+    
+    ## 2-level while loop with index "pointers" into the rtn matrix
+    ## and the dataframe. Scans through the data and the rtn matrix
+    ## at the same time and adds any none-na value that meets the
+    ## criteria for any given week. This works only because the
+    ## date format is correctly ordered by sort even though its not
+    ## a numeric and the subsetted dataframe _has_ been sorted.
+    ## Could be done with a small number of table commands, but I
+    ## (SR) wanted to be able to handle any line-by-line cleaning
+    ## in future within this loop if needed.
+    while (cur_ind_df <= max_ind_df) {
+      while (
+        sel_weeks[cur_ind_rtn] != tmpdf$yrweek[cur_ind_df] &&
+        cur_ind_rtn <= max_ind_rtn
+      ) {
+        cur_ind_rtn <- cur_ind_rtn + 1
+      }
+      if (cur_ind_rtn <= max_ind_rtn) {
+        val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
+        val_df <- as.numeric(tmpdf$ValueNumeric[cur_ind_df])
+        if (!is.na(val_df)) {
+          if (is.na(val_rtn)) {
+            rtnmat[cur_ind_rtn,cur_iso3] <- val_df
+          } else {
+            rtnmat[cur_ind_rtn,cur_iso3] <-
+              rtnmat[cur_ind_rtn,cur_iso3] + val_df
+          }
+        }
+      }
+      cur_ind_df <- cur_ind_df + 1
+    }
+    
+    ## Close the country-level loop
+  }
+  
+  ## Return the populated incidence matrix as only result of function
+  rtnmat
+  
+}
+
+
+#' I will only extract countries appearred in my report for now to keep consistency
+#' To get the country list, I will run the code of filtering countries.
+
+minprop <- 0.5
+fluWHO.incidence <- extract.incidence.who(
+  fluWHO,
+  sel_iso3 = unique(fluWHO$ISO3),
+  sel_ag = c("All"),
+  sel_measure = c("ILI_CASES"),
+  minYear=2010,
+  maxYear = 2018)
+
+sel_iso <- names(which(colSums(is.na(fluWHO.incidence))/dim(fluWHO.incidence)[1]<minprop))
+
+fluWHO.incidence <- extract.incidence.who(
+  fluWHO,
+  sel_iso3 = sel_iso,
+  sel_ag = c("All"),
+  sel_measure = c("ILI_CASES"),
+  minYear=2010,
+  maxYear=2018
+)
+
+#' Check if the data of left countries is eligible for xgboost
+
+#' extract_incidence is the function in package idd which can'y be loaded
+#' therefore copy the code 
+extract_incidence.idd <- function(flu_data,
+                                  country_code,
+                                  year) {
+  flu_data <- as.data.frame(flu_data)
+  year_names <- rownames(flu_data)
+  # start plotting at week 27 of the current year
+  row_name_start <- paste0(year, "-27") 
+  # stop plotting at week 26 of the next year
+  row_name_end <- paste0(year + 1, "-26")
+  # find the corresponding weeks in the data
+  row_index_start <- which(rownames(flu_data) == row_name_start)
+  row_index_end <- which(rownames(flu_data) == row_name_end)
+  # extrac the week number and incidence for those weeks
+  incidence <- flu_data[seq(row_index_start, row_index_end), 
+                        colnames(flu_data) == country_code]
+  time_name_vec <- year_names[seq(row_index_start, row_index_end)]
+  
+  incidence_data <- data.frame(t = seq_along(time_name_vec), 
+                               time_name = time_name_vec, 
+                               incidence = incidence)
+  return(incidence_data)
+}
 
 #' XGBoost uses a matrix of input data instead of a data frame,
 #' so the output of gbm_complex should be a matrix of dataset.
@@ -49,7 +244,7 @@ gbm_complex <- function(data, country, num_category,nWeek_ahead){
   yr <- seq(2010, 2017, by = 1)
   initial_data <- c()
   for (i in 1:length(yr)){
-    tmp <- extract_incidence(data, country_code = country, yr[i])
+    tmp <- extract_incidence.idd(data, country_code = country, yr[i])
     initial_data <- rbind(initial_data, tmp)
   }
   initial_data <- as.data.frame(initial_data)
@@ -249,18 +444,12 @@ gbm_complex <- function(data, country, num_category,nWeek_ahead){
   incidence_gbm
 }
 
-# example of datasets
-USA_complex1 <- gbm_complex(fluIliCountryData, "USA", 10,1)
-USA_complex2 <- gbm_complex(fluIliCountryData, "USA", 10,2)
-USA_complex3 <- gbm_complex(fluIliCountryData, "USA", 10,3)
-USA_complex4 <- gbm_complex(fluIliCountryData, "USA", 10,4)
-
 
 #' explore how many years data each countries owns
 duration <- function(country){
   year_time <- c(2010:2018)
   
-  flu_data_complex <- gbm_complex(fluIliCountryData, country, 10,1)
+  flu_data_complex <- gbm_complex(fluWHO.incidence, country, 10,1)
   year_start <- min(as.numeric(substr(rownames(flu_data_complex),0,4)))
   year_end <- max(as.numeric(substr(rownames(flu_data_complex),0,4)))
   all_year <- as.numeric(substr(rownames(flu_data_complex),0,4))
@@ -282,8 +471,8 @@ duration <- function(country){
 }
 
 country_year <- NULL
-for (i in 1:length(country_code)){
-  tmp <- duration(country_code[i])
+for (i in 1:length(sel_iso)){
+  tmp <- duration(sel_iso[i])
   country_year <- rbind(country_year, tmp)
 }
 country_year <- as.data.frame(country_year)
@@ -295,23 +484,90 @@ rownames(country_year) <- c(1:nrow(country_year))
 
 countryCode_no1718Or10 <- country_year$Country[which(country_year$end_year < 2017 | country_year$`2010`=="No" )]
 countryCode_no10 <- country_year$Country[which(country_year$`2010`=="No")]
-# countries will not be used in xgboost model because of lack of 2017 and 2018 data or 2010 data
-# they are Barbados,Belarus,Bhutan, Honduras, New Zealand, Nigeria,Oman, Pakistan,Singapore,Tajikistan,
-# Thailand, Macedonia, the former Yugoslav Republic of, Northern Mariana Islands.
-country_no1718Or10 <- country_idd$Country[which(country_idd$ISO3 %in%countryCode_no1718Or10)]
+#' countries will not be used in xgboost model because of lack of 2017 and 2018 data or 2010 data
+#' They are Barbados,Belarus,Bhutan, Honduras, New Zealand, Nigeria,Oman, Pakistan,Singapore,Tajikistan,
+#' Thailand, Macedonia, the former Yugoslav Republic of, Northern Mariana Islands. 
+country_no1718Or10 <- sel_iso[which(sel_iso %in%countryCode_no1718Or10)] # 20 in total
 
-#' exclude countires whose datasets are uneligible to be used in xboost
+#' Exlcude the countries do not have data of 2010 or 2017 or 2018
+#' 51 countries left
+sel_iso_xgb <- sel_iso
+for (i in 1:length(country_no1718Or10)){
+  index <- which(sel_iso_xgb == country_no1718Or10[i])
+  sel_iso_xgb <- sel_iso_xgb[-(index)]
+}
 
-# GUM 2016 data only get one obeservation
-country_xgboost <- country_code[-c(which(country_code%in%countryCode_no1718Or10),which(country_code%in%"GUM"))] # 43 countries
-# KIR 2016 data only 5 observations, can't 4-week predict.
-country_xgboost <- country_xgboost[-which(country_xgboost%in%"KIR")] # 42 countries
+#' Check different countries in fluIliCountryData with countries in null_models
+country.idd <- colnames(fluIliCountryData)
+country.null <- colnames(x)
+
+same.country.idd.null <- c()
+not.same.country.idd.null <- c()
+for (i in 1:length(country.null)){
+  if (country.null[i] %in% country.idd == TRUE){
+    tmp <- country.null[i]
+    same.country.idd.null <- append(same.country.idd.null, tmp)
+  }else{
+    tmp <- country.null[i]
+    not.same.country.idd.null <- append(not.same.country.idd.null,country.null[i])
+  }
+}
+
+#' The 68 countries in fluIliCountryData are also in the WHO dataset.
+#' There are 3 more countries in WHO dataset, they are Cuba CUB, Iceland ISL and Italy ITA
+not.same.country.idd.null
+
+
+# for (i in 1:length(not.same.country.idd.null)){
+#  if(not.same.country.idd.null[i] %in% sel_iso_xgb == TRUE){
+#    index <- which(sel_iso_xgb == not.same.country.idd.null[i])
+#  }
+#  sel_iso_xgb <- sel_iso_xgb[-(index)]
+#}
+
+
+#' Check if countries have less than 5 weeks data in a year because I will do the 4-week ahead foreacast which
+#' requires data of 5 consective weeks
+#' Exclude countires whose datasets are uneligible to do the 4-week ahead forecast
+#' GUM 2016 data only get one obeservation
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"GUM")] # 50 countries
+# KIR 2016 data only 5 observations,  4-week predict.
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"KIR")] # 49 countries
 # FSM
-country_xgboost <- country_xgboost[-which(country_xgboost%in%"FSM")] # 41 countries
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"FSM")] # 48 countries
 # MHL
-country_xgboost <- country_xgboost[-which(country_xgboost%in%"MHL")] # 40 countries
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"MHL")] # 47 countries
 # PLW
-country_xgboost <- country_xgboost[-which(country_xgboost%in%"PLW")] # 39 countries
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"PLW")] # 46 countries
+# COK
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"COK")] # 45 countries
+# NRU
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"NRU")] # 44 countries
+# TUV
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"TUV")] # 43 countries
+# ASM
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"ASM")] # 42 countries
+
+
+# extract incidence of 42 eligible countries.
+fluWHO.incidence <- extract.incidence.who(fluWHO,
+                                          sel_iso_xgb,
+                                          sel_ag = c("All"),
+                                          sel_measure = c("ILI_CASES"),
+                                          minYear = 2010,
+                                          maxYear = 2018
+                                          )
+
+
+#### XGBooost ####
+
+# example of datasets
+USA_complex1 <- gbm_complex(fluWHO.incidence, "USA", 10,1)
+USA_complex2 <- gbm_complex(fluWHO.incidence, "USA", 10,2)
+USA_complex3 <- gbm_complex(fluWHO.incidence, "USA", 10,3)
+USA_complex4 <- gbm_complex(fluWHO.incidence, "USA", 10,4)
+
+
 
 country_xgb <- c()
 for (i in 1:length(country_xgboost)){
