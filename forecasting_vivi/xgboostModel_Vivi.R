@@ -547,7 +547,8 @@ sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"NRU")] # 44 countries
 sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"TUV")] # 43 countries
 # ASM
 sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"ASM")] # 42 countries
-
+#ISL only 4 consecutive week in 2010
+sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"ISL")] # 41 countries
 
 # extract incidence of 42 eligible countries.
 fluWHO.incidence <- extract.incidence.who(fluWHO,
@@ -562,11 +563,10 @@ fluWHO.incidence <- extract.incidence.who(fluWHO,
 #### XGBooost ####
 
 # example of datasets
-USA_complex1 <- gbm_complex(fluWHO.incidence, "USA", 10,1)
-USA_complex2 <- gbm_complex(fluWHO.incidence, "USA", 10,2)
-USA_complex3 <- gbm_complex(fluWHO.incidence, "USA", 10,3)
-USA_complex4 <- gbm_complex(fluWHO.incidence, "USA", 10,4)
-
+USA_complex1 <- gbm_complex(fluWHO.incidence, "USA", 10,1) # dataframe for 1-week ahead 
+USA_complex2 <- gbm_complex(fluWHO.incidence, "USA", 10,2) # dataframe for 2-week ahead
+USA_complex3 <- gbm_complex(fluWHO.incidence, "USA", 10,3) # dataframe for 3-week ahead
+USA_complex4 <- gbm_complex(fluWHO.incidence, "USA", 10,4) # dataframe for 4-week ahead
 
 
 country_xgb <- c()
@@ -605,11 +605,17 @@ xgboost_dat <- function(flu_data_complex, start_year, end_year){
   xgb_dat
 }
 
+
 #' XGBoost model
+#' train_num_start: to calculate start year of trainign set. The origin is 2010, 0 represents 2010, 1 represents 2010+1=2011
+#' , and on 
+#' train_num_end: to calculate the end year of traingin set. End year = start year + train_num_end 
+#' = 2010 + train_num_start +train_num_end
 xgboost.model.pred <- function(flu_data, country, num_category,
                                train_num_start, train_num_end, nWeek_ahead){
   # set up dataset for xgboost
   flu_data_complex <- gbm_complex(flu_data, country, 10,nWeek_ahead)
+
   year_start <- min(as.numeric(substr(rownames(flu_data_complex),0,4)))
   year_end <- max(as.numeric(substr(rownames(flu_data_complex),0,4)))
   start_year_tr <- year_start + train_num_start
@@ -659,11 +665,11 @@ xgboost.model.pred <- function(flu_data, country, num_category,
   pred_timeseries
 }
 
-#' for caculation of accuracy metric
+#' Function of caculating the accuracy metric
 compare_accuracy <- function(country_list,train_num_start, train_num_end,nWeek_ahead){
   pred <- NULL
   for (i in 1:length(country_list)){
-    individual_pred <- xgboost.model.pred(fluIliCountryData,country_list[i],10,
+    individual_pred <- xgboost.model.pred(fluWHO.incidence,country_list[i],10,
                                           train_num_start, train_num_end,nWeek_ahead)
     individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
@@ -678,7 +684,7 @@ compare_accuracy <- function(country_list,train_num_start, train_num_end,nWeek_a
 
 # one-week ahead forecast
 # 2010-2104 training, 2015 test
-compare_pred15 <- compare_accuracy(country_xgb$ISO3, 0, 4 ,1)
+compare_pred15 <- compare_accuracy(sel_iso_xgb, 0, 4 ,1)
 
 # 2011-2015 training, 2016 test
 compare_pred16 <- compare_accuracy(country_xgb$ISO3, 1, 4, 1)
@@ -802,31 +808,31 @@ heat_plot <- function(frequencyTable, countryName){
             panel = myPanel, par.settings=mapTheme, at=my.at, colorkey=myColorkey, margin=F)
 }
 
-# heat chart for 1-year ahead forecast
+#' Print out heat chart 
 # 2010-2014 training, 2015 test
-for (i in 1:length(country_xgboost)){
-  pdf(paste0(country_idd$Country[i],".pdf"))
-  forecast_result <- xgboost.model.pred(fluIliCountryData, country_xgboost[i], countryISO, 10, 0, 4, 4)
+for (i in 1:length(sel_iso_xgb)){
+  #pdf(paste0(sel_iso_xgb[i],".pdf"))
+  forecast_result <- xgboost.model.pred(fluWHO.incidence, sel_iso_xgb[i], 10, 0, 4, 1)
   frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, country_xgboost[i]))
-  dev.off()
+  print(heat_plot(frequency_table, sel_iso_xgb[i]))
+  #dev.off()
 }
 
 # 2011-2015 train, 2016 test
-for (i in 1:length(country_xgboost)){
-  pdf(paste0(country_idd$Country[i],".pdf"))
-  forecast_result <- xgboost.model.pred(fluIliCountryData, country_xgboost[i], countryISO, 10, 1, 4, 4)
+for (i in 1:length(sel_iso_xgb)){
+  pdf(paste0(sel_iso_xgb[i],".pdf"))
+  forecast_result <- xgboost.model.pred(fluWHO.incidence, sel_iso_xgb[i], 10, 1, 4, 1)
   frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, country_xgboost[i]))
+  print(heat_plot(frequency_table, sel_iso_xgb[i]))
   dev.off()
 }
 
-# heat chart for accuracy of last year predeiction of 4-yeat training
-for (i in 1:length(country_code)){
-  pdf(paste0(country_idd$Country[i],".pdf"))
-  forecast_result <-  pred1518_1718(fluIliCountryData,country_code[i])
+# 2012-2016 train, 2017 test
+for (i in 1:length(sel_iso_xgb)){
+  pdf(paste0(sel_iso_xgb[i],".pdf"))
+  forecast_result <-  xgboost.model.pred(fluWHO.incidence, sel_iso_xgb[i], 10, 2, 4, 1)
   frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, country_code[i]))
+  print(heat_plot(frequency_table, sel_iso_xgb[i]))
   dev.off()
 }
 
@@ -873,8 +879,9 @@ hist_dataform <- function(flu_data){
   hist
 }
 
-hist_average <- function(flu_data, country,numWeek_ahead){
-  flu_data_complex <- gbm_complex(flu_data, country, countryISO, 10)
+hist_average <- function(flu_data, country,num_category, numWeek_ahead){
+  flu_data_complex <- gbm_complex(flu_data, country, num_category,numWeek_ahead)
+  flu_data_complex_four <- gbm_complex(flu_data, country, num_category,4)
   # hist_dataset <- hist_dataform(flu_data_complex)
   flu_data_complex <- cbind(substr(rownames(flu_data_complex), 0,4), 
                             substr(rownames(flu_data_complex),6,7),
@@ -882,20 +889,27 @@ hist_average <- function(flu_data, country,numWeek_ahead){
   colnames(flu_data_complex) <- c("Year","Week","Y_week0","week_1","week_2")
   flu_data_complex$Week <- as.numeric(flu_data_complex$Week)
   
-  pred <- matrix(NA,nrow = (nrow(flu_data_complex)-4), ncol = numWeek_ahead)
+  flu_data_complex_four <- cbind(substr(rownames(flu_data_complex), 0,4), 
+                                 substr(rownames(flu_data_complex),6,7),
+                                 flu_data_complex[,1:3]) %>% as.data.frame()
+  colnames(flu_data_complex_four) <- c("Year","Week","Y_week0","week_4","week_5")
+  flu_data_complex_four$Week <- as.numeric(flu_data_complex_four$Week)
+
+  pred <- matrix(NA,nrow = nrow(flu_data_complex), ncol = numWeek_ahead)
   
   if (numWeek_ahead == 1){
-    for (i in 5:nrow(flu_data_complex)){
+    for (i in 1:nrow(flu_data_complex)){
       yr <- flu_data_complex$Year[i]
       week <- flu_data_complex$Week[i]-1
       obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
       obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i-4,] <- which.max(tabulate(obs))
+      pred[i,] <- which.max(tabulate(obs))
     }
-    pred <- cbind(rownames(flu_data_complex)[-c(1:4)],pred,flu_data_complex$Y_week0[-c(1:4)]) %>% 
+    
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead", "Observation")
-    
+
     # accuracy
     for (i in 1:nrow(pred)){
       if (is.na(pred[i,2])==TRUE || is.na(pred[i,3])==TRUE){
@@ -911,14 +925,14 @@ hist_average <- function(flu_data, country,numWeek_ahead){
   }
   
   if (numWeek_ahead == 2){
-    for (i in 5:nrow(flu_data_complex)){
+    for (i in 1:nrow(flu_data_complex)){
       yr <- flu_data_complex$Year[i]
       week <- flu_data_complex$Week[i]-2
       obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
       obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i-4,] <- which.max(tabulate(obs))
+      pred[i,] <- which.max(tabulate(obs))
     }
-    pred <- cbind(rownames(flu_data_complex)[-c(1:4)],pred,flu_data_complex$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","Observation")
     
@@ -937,14 +951,14 @@ hist_average <- function(flu_data, country,numWeek_ahead){
   }
   
   if (numWeek_ahead == 3){
-    for (i in 5:nrow(flu_data_complex)){
+    for (i in 1:nrow(flu_data_complex)){
       yr <- flu_data_complex$Year[i]
       week <- flu_data_complex$Week[i]-3
       obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
       obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i-4,] <- which.max(tabulate(obs))
+      pred[i,] <- which.max(tabulate(obs))
     }
-    pred <- cbind(rownames(flu_data_complex)[-c(1:4)],pred,flu_data_complex$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","ThreeWeek_ahead","Observation")
     
@@ -963,14 +977,14 @@ hist_average <- function(flu_data, country,numWeek_ahead){
   }
   
   if (numWeek_ahead == 4){
-    for (i in 5:nrow(flu_data_complex)){
+    for (i in 1:nrow(flu_data_complex)){
       yr <- flu_data_complex$Year[i]
       week <- flu_data_complex$Week[i]-4
       obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
       obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i-4,] <- which.max(tabulate(obs))
+      pred[i,] <- which.max(tabulate(obs))
     }
-    pred <- cbind(rownames(flu_data_complex)[-c(1:4)],pred,flu_data_complex$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","ThreeWeek_ahead","FourWeek_ahead","Observation")
     
@@ -989,15 +1003,21 @@ hist_average <- function(flu_data, country,numWeek_ahead){
   }
   pred
 }
-USA_hist_pred <- hist_average(fluIliCountryData,"USA",4)
+
+# example 
+USA_hist_pred_one <- hist_average(fluWHO.incidence,"USA",10,1)
+USA_hist_pred_two <- hist_average(fluWHO.incidence,"USA",10,2)
+USA_hist_pred_three <- hist_average(fluWHO.incidence,"USA",10,3)
+USA_hist_pred_four <- hist_average(fluWHO.incidence,"USA",10,4)
+
 
 # compare 1,2,3,4-week ahead forecast accuracy
-compare_accuracy_hist <- function(flu_data,country_list,numWeek_ahead){
+compare_accuracy_hist <- function(flu_data,country,num_category,numWeek_ahead){
   pred <- NULL
   
-  for (i in 1:length(country_list)){
-    individual_pred <- hist_average(flu_data,country_list[i],numWeek_ahead)
-    individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
+  for (i in 1:length(country)){
+    individual_pred <- hist_average(flu_data,country[i],num_category,numWeek_ahead)
+    individual_pred <- cbind(rep(country[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
   }
   pred <- as.data.frame(pred)
@@ -1006,19 +1026,19 @@ compare_accuracy_hist <- function(flu_data,country_list,numWeek_ahead){
 }
 
 # 8842/13603 = 0.65
-oneWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluIliCountryData,country_xgboost,1)
+oneWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,1)
 length(which(oneWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(oneWeek_ahead_totalAccuracy_hist)
 
 # 0.64
-twoWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluIliCountryData,country_xgboost,2)
+twoWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,2)
 length(which(twoWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(twoWeek_ahead_totalAccuracy_hist)
 
 # 0.63
-threeWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluIliCountryData,country_xgboost,3)
+threeWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,3)
 length(which(threeWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(threeWeek_ahead_totalAccuracy_hist)
 
 # 0.62
-fourWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluIliCountryData,country_xgboost,4)
+fourWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,4)
 length(which(fourWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(fourWeek_ahead_totalAccuracy_hist)
 
 # plot the accuracy drop off as number of week-ahead increases
@@ -1027,17 +1047,18 @@ compareAccuracy_total_hist <- cbind(c(1:4),c(0.65,0.64,0.62,0.61)) %>%
 colnames(compareAccuracy_total_hist) <- c("nWeek_ahead","percentage")
 
 #### repeat model ####
-repeat_model <- function(flu_data,numWeek_ahead){
+repeat_model <- function(flu_data,country, num_category, numWeek_ahead){
   require(dplyr)
   
+  flu_data_complex <- gbm_complex(flu_data, country, num_category,numWeek_ahead)                                  
   # prediction of the week is the same as the last week
   if(numWeek_ahead == 1){
     pred <- c()
-    for (i in 1:(nrow(flu_data)-4)){
-      tmp <- flu_data$week_1[i+4]
+    for (i in 1:nrow(flu_data_complex)){
+      tmp <- flu_data_complex$week_1[i]
       pred <- append(pred,tmp)
     }
-    pred <- cbind(rownames(flu_data)[-c(1:4)],pred, flu_data$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred, flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","Prediction","Observation")
     
@@ -1056,12 +1077,12 @@ repeat_model <- function(flu_data,numWeek_ahead){
   }
   
   if (numWeek_ahead == 2){
-    pred <- matrix(NA, nrow = (nrow(flu_data)-4),ncol = 2)
+    pred <- matrix(NA, nrow = nrow(flu_data_complex),ncol = 2)
     for (i in 1:nrow(pred)){
-      pred[i,] <- flu_data$week_2[i+4]
+      pred[i,] <- flu_data_complex$week_2[i]
     }
     
-    pred <- cbind(rownames(flu_data)[-c(1:4)],pred,flu_data$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c('Week_time','OneWeek_ahead','TwoWeek_ahead', "Observation")
     
@@ -1080,15 +1101,15 @@ repeat_model <- function(flu_data,numWeek_ahead){
   }
   
   if (numWeek_ahead == 3){
-    pred <- matrix(NA, nrow = (nrow(flu_data)-4),ncol = 3)
+    pred <- matrix(NA, nrow = nrow(flu_data_complex),ncol = 3)
     for (i in 1:nrow(pred)){
-      pred[i,] <- flu_data$week_2[i+2]
+      pred[i,] <- flu_data_complex$week_3[i]
     }
     
-    pred <- cbind(rownames(flu_data)[-c(1:4)],pred,flu_data$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead","TwoWeek_ahead","ThreeWeek_ahead", "Observation")
-    
+
     # accuracy
     for (i in 1:nrow(pred)){
       if (is.na(pred[i,4])==TRUE || is.na(pred[i,5])==TRUE){
@@ -1104,12 +1125,12 @@ repeat_model <- function(flu_data,numWeek_ahead){
   }
   
   if (numWeek_ahead == 4){
-    pred <- matrix(NA, nrow = (nrow(flu_data)-4),ncol = 4)
+    pred <- matrix(NA, nrow = nrow(flu_data_complex),ncol = 4)
     for (i in 1:nrow(pred)){
-      pred[i,] <- flu_data$week_2[i+1]
+      pred[i,] <- flu_data_complex$week_4[i]
     }
     
-    pred <- cbind(rownames(flu_data)[-c(1:4)],pred,flu_data$Y_week0[-c(1:4)]) %>% 
+    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
       as.data.frame()
     colnames(pred) <- c("Week_time","OneWeek_ahead","TwoWeek_ahead","ThreeWeek_ahead","FourWeek_ahead", "Observation")
     # accuracy
@@ -1128,15 +1149,23 @@ repeat_model <- function(flu_data,numWeek_ahead){
   
   pred
 }
-USA <- repeat_model(USA_complex,3)
 
-compare_accuracy_repeat <- function(flu_data,country_list,numWeek_ahead){
+# example 
+USA_repeat_one <- repeat_model(fluWHO.incidence,'USA',10,1)
+USA_repeat_two <- repeat_model(fluWHO.incidence,'USA',10,2)
+USA_repeat_three <- repeat_model(fluWHO.incidence,'USA',10,3)
+USA_repeat_four <- repeat_model(fluWHO.incidence,'USA',10,4)
+
+intersect(intersect(intersect(USA_repeat_one$Week_time,USA_repeat_two$Week_time),USA_repeat_three$Week_time),
+          USA_repeat_four$Week_time)
+
+
+compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead){
   pred <- NULL
   
-  for (i in 1:length(country_list)){
-    flu_data_complex <- gbm_complex(fluIliCountryData,country_list[i],countryISO,10)
-    individual_pred <- repeat_model(flu_data_complex,numWeek_ahead)
-    individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
+  for (i in 1:length(country)){
+    individual_pred <- repeat_model(flu_data,country[i],num_category, numWeek_ahead)
+    individual_pred <- cbind(rep(country[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
   }
   pred <- as.data.frame(pred)
@@ -1146,17 +1175,21 @@ compare_accuracy_repeat <- function(flu_data,country_list,numWeek_ahead){
 }
 
 # get the total accuract for 1,2,3,4-weeks ahead
-oneWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluIliCountryData,country_xgboost,1)
-length(which(oneWeek_ahead_totalAccuracy$Accurate==1))  # 10200 out of 13557
+oneWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,1)
+length(which(oneWeek_ahead_totalAccuracy$Accurate==1))  # 9641 out of 12081
+length(which(oneWeek_ahead_totalAccuracy$Accurate==1))/nrow(oneWeek_ahead_totalAccuracy) # 0.79803
 
-twoWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluIliCountryData,country_xgboost,2)
-length(which(twoWeek_ahead_totalAccuracy$Accurate==1)) # 9478
+twoWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,2)
+length(which(twoWeek_ahead_totalAccuracy$Accurate==1)) # 8896
+length(which(twoWeek_ahead_totalAccuracy$Accurate==1))/nrow(twoWeek_ahead_totalAccuracy) # 0.7440616
 
-threeWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluIliCountryData,country_xgboost,3)
-length(which(threeWeek_ahead_totalAccuracy$Accurate==1)) # 8498
+threeWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,3)
+length(which(threeWeek_ahead_totalAccuracy$Accurate==1)) # 8332
+length(which(threeWeek_ahead_totalAccuracy$Accurate==1))/nrow(threeWeek_ahead_totalAccuracy) #0.7043111
 
-fourWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluIliCountryData,country_xgboost,4)
-length(which(fourWeek_ahead_totalAccuracy$Accurate==1)) # 8095
+fourWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,4)
+length(which(fourWeek_ahead_totalAccuracy$Accurate==1)) # 7880
+length(which(fourWeek_ahead_totalAccuracy$Accurate==1))/nrow(fourWeek_ahead_totalAccuracy) # 0.67
 
 # plot the accuracy drop off as number of week-ahead increases
 compareAccuracy_total <- cbind(c(1:4),c(10181, 9401, 8415,7996),c(0.75,0.69,0.62,0.59))
