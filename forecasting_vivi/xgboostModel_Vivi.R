@@ -1,4 +1,4 @@
-library('idd') # WHO influenza-likeness-illness data; idd package is not available (for R version 3.6.1)
+# library('idd') # WHO influenza-likeness-illness data; idd package is not available (for R version 3.6.1)
 library('ggplot2') # transform integer numbers to categorical variable
 library('xgboost') # boosted regression tree
 library('formattable') # formatting on data frames
@@ -20,6 +20,10 @@ library("DiagrammeRsvg") # multi tree plot
 library("data.table") # convert data frame to data table
 library("aweek") # convert discrete time variable into contious variable
 library("knitr")
+library("devtools") # to install package from github
+# install_github("AppliedDataSciencePartners/xgboostExplainer")
+# library("xgboostExplainer") # to interpret every single tree 
+# library("pROC")
 
 rm(list = ls(all = TRUE))
 
@@ -482,7 +486,8 @@ country_year$end_year <- as.numeric(as.character(country_year$end_year))
 country_year$start_year <- as.numeric(as.character(country_year$start_year))
 rownames(country_year) <- c(1:nrow(country_year))
 
-countryCode_no1718Or10 <- country_year$Country[which(country_year$end_year < 2017 | country_year$`2010`=="No" )]
+countryCode_no1718Or10 <- country_year$Country[which(country_year$end_year < 2017 | country_year$`2010`=="No"| 
+                                                       country_year$`2018`=="No")]
 countryCode_no10 <- country_year$Country[which(country_year$`2010`=="No")]
 #' countries will not be used in xgboost model because of lack of 2017 and 2018 data or 2010 data
 #' They are Barbados,Belarus,Bhutan, Honduras, New Zealand, Nigeria,Oman, Pakistan,Singapore,Tajikistan,
@@ -498,24 +503,24 @@ for (i in 1:length(country_no1718Or10)){
 }
 
 #' Check different countries in fluIliCountryData with countries in null_models
-country.idd <- colnames(fluIliCountryData)
-country.null <- colnames(x)
+# country.idd <- colnames(fluIliCountryData)
+# country.null <- colnames(x)
 
-same.country.idd.null <- c()
-not.same.country.idd.null <- c()
-for (i in 1:length(country.null)){
-  if (country.null[i] %in% country.idd == TRUE){
-    tmp <- country.null[i]
-    same.country.idd.null <- append(same.country.idd.null, tmp)
-  }else{
-    tmp <- country.null[i]
-    not.same.country.idd.null <- append(not.same.country.idd.null,country.null[i])
-  }
-}
+# same.country.idd.null <- c()
+# not.same.country.idd.null <- c()
+# for (i in 1:length(country.null)){
+#  if (country.null[i] %in% country.idd == TRUE){
+#    tmp <- country.null[i]
+#   same.country.idd.null <- append(same.country.idd.null, tmp)
+#  }else{
+#    tmp <- country.null[i]
+#    not.same.country.idd.null <- append(not.same.country.idd.null,country.null[i])
+#  }
+#}
 
 #' The 68 countries in fluIliCountryData are also in the WHO dataset.
 #' There are 3 more countries in WHO dataset, they are Cuba CUB, Iceland ISL and Italy ITA
-not.same.country.idd.null
+# not.same.country.idd.null
 
 
 # for (i in 1:length(not.same.country.idd.null)){
@@ -526,31 +531,12 @@ not.same.country.idd.null
 #}
 
 
-#' Check if countries have less than 5 weeks data in a year because I will do the 4-week ahead foreacast which
+#' Check if left countries have less than 5 weeks data in a year because I will do the 4-week ahead foreacast which
 #' requires data of 5 consective weeks
 #' Exclude countires whose datasets are uneligible to do the 4-week ahead forecast
-#' GUM 2016 data only get one obeservation
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"GUM")] # 50 countries
-# KIR 2016 data only 5 observations,  4-week predict.
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"KIR")] # 49 countries
-# FSM
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"FSM")] # 48 countries
-# MHL
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"MHL")] # 47 countries
-# PLW
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"PLW")] # 46 countries
-# COK
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"COK")] # 45 countries
-# NRU
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"NRU")] # 44 countries
-# TUV
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"TUV")] # 43 countries
-# ASM
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"ASM")] # 42 countries
-#ISL only 4 consecutive week in 2010
-sel_iso_xgb <- sel_iso_xgb[-which(sel_iso_xgb%in%"ISL")] # 41 countries
 
-# extract incidence of 42 eligible countries.
+
+# extract incidence of 41 eligible countries.
 fluWHO.incidence <- extract.incidence.who(fluWHO,
                                           sel_iso_xgb,
                                           sel_ag = c("All"),
@@ -568,13 +554,69 @@ USA_complex2 <- gbm_complex(fluWHO.incidence, "USA", 10,2) # dataframe for 2-wee
 USA_complex3 <- gbm_complex(fluWHO.incidence, "USA", 10,3) # dataframe for 3-week ahead
 USA_complex4 <- gbm_complex(fluWHO.incidence, "USA", 10,4) # dataframe for 4-week ahead
 
+adjust.data.size <- function(flu_data,country,category,numWeek_ahead){
+  complex1 <- gbm_complex(flu_data,country,category,1)
+  complex2 <- gbm_complex(flu_data,country,category,2)
+  complex3 <- gbm_complex(flu_data,country,category,3)
+  complex4 <- gbm_complex(flu_data,country,category,4)
+  week <- intersect(rownames(complex1),intersect(rownames(complex2),
+                    intersect(rownames(complex3),rownames(complex4))))
+  
+  complex <- gbm_complex(flu_data,country,category,numWeek_ahead)
+  index <- c()
+  for (i in 1:nrow(complex)){
+    if(rownames(complex)[i] %in% week == FALSE){
+      tmp <- i
+      index <- append(index, tmp)
+    }
+  }
+  if (length(index) == 0){
+    complex <- complex
+  }else{
+    complex <- complex[-(index),]
+  }
 
-country_xgb <- c()
-for (i in 1:length(country_xgboost)){
-  index <- grep(country_xgboost[i],countryISO$ISO3)
-  tmp <- countryISO[index,]
-  country_xgb <- rbind(country_xgb, tmp)
+  complex
 }
+
+b <- adjust.data.size(fluWHO.incidence,sel_iso_xgb[3],10,3)
+# a <- adjust.data.size(fluWHO.incidence,sel_iso_xgb[3],10,3)
+
+length1 <- c()
+for (i in 1:length(sel_iso_xgb)){
+  a <- adjust.data.size(fluWHO.incidence, sel_iso_xgb[i], 10,1)
+  tmp <- nrow(a)
+  length1 <- append(length1,tmp)
+  
+}
+
+length2 <- c()
+for (i in 1:length(sel_iso_xgb)){
+  a <- adjust.data.size(fluWHO.incidence, sel_iso_xgb[i], 10,2)
+  tmp <- nrow(a)
+  length2 <- append(length2,tmp)
+}
+
+length3 <- c()
+for (i in 1:length(sel_iso_xgb)){
+  a <- adjust.data.size(fluWHO.incidence, sel_iso_xgb[i], 10,3)
+  tmp <- nrow(a)
+  length3 <- append(length3,tmp)
+}
+
+length4 <- c()
+for (i in 1:length(sel_iso_xgb)){
+  a <- adjust.data.size(fluWHO.incidence, sel_iso_xgb[i], 10,4)
+  tmp <- nrow(a)
+  length4 <- append(length4,tmp)
+}
+
+# country_xgb <- c()
+# for (i in 1:length(country_xgboost)){
+  # index <- grep(country_xgboost[i],countryISO$ISO3)
+  # tmp <- countryISO[index,]
+  # country_xgb <- rbind(country_xgb, tmp)
+# }
 
 #' Convert dataframe into matrix
 xgboost_dat <- function(flu_data_complex, start_year, end_year){
@@ -614,7 +656,7 @@ xgboost_dat <- function(flu_data_complex, start_year, end_year){
 xgboost.model.pred <- function(flu_data, country, num_category,
                                train_num_start, train_num_end, nWeek_ahead){
   # set up dataset for xgboost
-  flu_data_complex <- gbm_complex(flu_data, country, 10,nWeek_ahead)
+  flu_data_complex <- adjust.data.size(flu_data, country, num_category, nWeek_ahead)
 
   year_start <- min(as.numeric(substr(rownames(flu_data_complex),0,4)))
   year_end <- max(as.numeric(substr(rownames(flu_data_complex),0,4)))
@@ -665,11 +707,12 @@ xgboost.model.pred <- function(flu_data, country, num_category,
   pred_timeseries
 }
 
+
 #' Function of caculating the accuracy metric
-compare_accuracy <- function(country_list,train_num_start, train_num_end,nWeek_ahead){
+compare_accuracy <- function(country_list,num_category, train_num_start, train_num_end,nWeek_ahead){
   pred <- NULL
   for (i in 1:length(country_list)){
-    individual_pred <- xgboost.model.pred(fluWHO.incidence,country_list[i],10,
+    individual_pred <- xgboost.model.pred(fluWHO.incidence,country_list[i],num_category,
                                           train_num_start, train_num_end,nWeek_ahead)
     individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
@@ -683,56 +726,136 @@ compare_accuracy <- function(country_list,train_num_start, train_num_end,nWeek_a
 
 
 # one-week ahead forecast
-# 2010-2104 training, 2015 test
-compare_pred15 <- compare_accuracy(sel_iso_xgb, 0, 4 ,1)
+# 2010-2014 training, 2015 test
+compare_pred15 <- compare_accuracy(sel_iso_xgb, 10, 0, 4 ,1)
+length(which(compare_pred15$Accurate==1))/nrow(compare_pred15) # 0.7868296
 
 # 2011-2015 training, 2016 test
-compare_pred16 <- compare_accuracy(country_xgb$ISO3, 1, 4, 1)
+compare_pred16 <- compare_accuracy(sel_iso_xgb,10, 1, 4, 1) 
+length(which(compare_pred16$Accurate==1))/nrow(compare_pred16) # 0.7470383
 
 # 2012-2016 training. 2017 test
-compare_pred17 <- compare_accuracy(country_xgb$ISO3, 2, 4, 1)
+compare_pred17 <- compare_accuracy(sel_iso_xgb,10, 2, 4, 1)
+length(which(compare_pred17$Accurate==1))/nrow(compare_pred17)
 
 # 2010-2016 traing, 2017 test
-compare1016_pred17 <- compare_accuracy(country_xgb$ISO3, 0, 6, 1)
+compare1016_pred17 <- compare_accuracy(sel_iso_xgb,10, 0, 6, 1)
+length(which(compare1016_pred17$Accurate==1))/nrow(compare1016_pred17) # 0.6979038
 
 # two-week ahead forecast
 # 2010-2104 training, 2015 test
-compare_pred15Two <- compare_accuracy(country_xgb$ISO3, 0, 4 ,2)
+compare_pred15Two <- compare_accuracy(sel_iso_xgb, 10, 0, 4 ,2)
 
 # 2011-2015 training, 2016 test
-compare_pred16Two <- compare_accuracy(country_xgb$ISO3, 1, 4,2)
+compare_pred16Two <- compare_accuracy(sel_iso_xgb, 10, 1, 4,2)
 
-# 2012-2016 training. 2017 test
-compare_pred17Two <- compare_accuracy(country_xgb$ISO3, 2, 4, 2)
+# 2012-2016 training. 2017&2018 test
+compare_pred17Two <- compare_accuracy(sel_iso_xgb, 10, 2, 4, 2)
 
-# 2010-2016 traing, 2017 test
-compare1016_pred17Two <- compare_accuracy(country_xgb$ISO3, 0, 6, 2)
+# 2010-2016 traing, 2017&2018 test
+compare1016_pred17Two <- compare_accuracy(sel_iso_xgb, 10, 0, 6, 2)
 
 # three week ahead
 # 2010-2104 training, 2015 test
-compare_pred15Three <- compare_accuracy(country_xgb$ISO3, 0, 4 ,3)
+compare_pred15Three <- compare_accuracy(sel_iso_xgb, 10, 0, 4 ,3)
 
 # 2011-2015 training, 2016 test
-compare_pred16Three <- compare_accuracy(country_xgb$ISO3, 1, 4, 3)
+compare_pred16Three <- compare_accuracy(sel_iso_xgb, 10, 1, 4, 3)
 
-# 2012-2016 training. 2017 test
-compare_pred17Three <- compare_accuracy(country_idd$ISO3, 2, 4, 3)
+# 2012-2016 training. 2017&2018 test
+compare_pred17Three <- compare_accuracy(sel_iso_xgb, 10, 2, 4, 3)
 
-# 2010-2016 traing, 2017 test
-compare1016_pred17Three <- compare_accuracy(country_xgb$ISO3, 0, 6, 3)
+# 2010-2016 traing, 2017&2018 test
+compare1016_pred17Three <- compare_accuracy(sel_iso_xgb, 10, 0, 6, 3)
 
 # four week ahead
 # 2010-2104 training, 2015 test
-compare_pred15Four <- compare_accuracy(country_xgb$ISO3, 0, 4 ,4)
+compare_pred15Four <- compare_accuracy(sel_iso_xgb, 10, 0, 4 ,4)
 
 # 2011-2015 training, 2016 test
-compare_pred16Four <- compare_accuracy(country_xgb$ISO3, 1, 4, 4)
+compare_pred16Four <- compare_accuracy(sel_iso_xgb, 10, 1, 4, 4)
 
-# 2012-2016 training. 2017 test
-compare_pred17Four <- compare_accuracy(country_xgb$ISO3, 2, 4, 4)
+# 2012-2016 training. 2017&2018 test
+compare_pred17Four <- compare_accuracy(sel_iso_xgb, 10, 2, 4, 4)
 
-# 2010-2016 traing, 2017 test
-compare1016_pred17Four <- compare_accuracy(country_xgb$ISO3, 0, 6, 4)
+# 2010-2016 traing, 2017&2018 test
+compare1016_pred17Four <- compare_accuracy(sel_iso_xgb, 10, 0, 6, 4)
+
+
+#' I want to see how the single tree works and hwo the model give the probability for each category.
+xgboost.model.train <- function(flu_data, country, num_category,
+                               train_num_start, train_num_end, nWeek_ahead){
+  # set up dataset for xgboost
+  flu_data_complex <- gbm_complex(flu_data, country, num_category, nWeek_ahead)
+  
+  year_start <- min(as.numeric(substr(rownames(flu_data_complex),0,4)))
+  year_end <- max(as.numeric(substr(rownames(flu_data_complex),0,4)))
+  start_year_tr <- year_start + train_num_start
+  end_year_tr <-  start_year_tr + train_num_end
+  start_year_ts <- end_year_tr + 1
+  
+  if ((start_year_ts == 2017 && year_end == 2018) == TRUE ){
+    end_year_ts <- year_end
+  }else{
+    end_year_ts <- start_year_ts
+  }
+  
+  xgb_tr <- xgboost_dat(flu_data_complex, start_year_tr, end_year_tr)
+  xgb_ts <- xgboost_dat(flu_data_complex, start_year_ts, end_year_ts)
+  
+  # train the xgboost model
+  params.train <- list(booster = "gbtree", objective = "multi:softprob", gamma=0, num_class = 10,
+                       subsample=1, colsample_bytree=1,eval_metric = "mlogloss")
+  watchlist <- list(train = xgb_tr, test = xgb_ts)
+  xgb_model <- xgb.train(params = params.train, data = xgb_tr, nrounds = 100, 
+                         watchlist = watchlist,verbose = 2, print_every_n = 10,
+                         early_stopping_round = 20)
+  xgb_model
+}
+
+xgboost.model.pred.output <- function(flu_data_complex, start_year_ts,
+                                      end_year_ts, xgb_pred){
+  start_year_ts_index <- grep(start_year_ts,rownames(flu_data_complex))[1]
+  end_ts <- grep(end_year_ts,rownames(flu_data_complex))
+  end_year_ts_index <- end_ts[length(end_ts)]
+  xgb_val_out <- matrix(xgb_pred, nrow = 10, ncol = length(xgb_pred)/10) %>% 
+    t() %>%
+    data.frame() %>%
+    mutate(max = max.col(., ties.method = "last"), 
+           category = flu_data_complex$Y_week0[start_year_ts_index:end_year_ts_index])
+  
+  pred_timeseries <- rownames(flu_data_complex)[start_year_ts_index:end_year_ts_index] %>% 
+    cbind(xgb_val_out[,(ncol(xgb_val_out)-1):ncol(xgb_val_out)]) %>%
+    data.frame()
+  colnames(pred_timeseries) <- c("week_time", "Prediction", "Observation")
+  pred_timeseries$Observation <- as.numeric(pred_timeseries$Observation)
+  pred_timeseries$Prediction <- as.numeric(pred_timeseries$Prediction)
+  pred_timeseries
+}
+
+# example of single tree
+usa.tree.one <- xgboost.model.train(fluWHO.incidence,"USA",10,0,4,1)
+usa.tr.one <- xgboost_dat(USA_complex1,2010,2014) 
+usa.ts.one <- xgboost_dat(USA_complex1, 2015,2015)
+usa.pred.one <- predict(usa.tree.one, usa.ts.one)
+usa.xgboost.model.pred.output.one <- xgboost.model.pred.output(USA_complex1,2015,2015,usa.pred.one)
+
+features <- attr(usa.ts.one, ".Dimnames")[[2]]
+imp <- xgb.importance(features, usa.tree.one)
+xgb.plot.importance(imp)
+
+
+explainer <- buildExplainer(usa.tree.one,usa.tr.one, type="binary", base_score = 0.5, trees_idx = NULL)
+pred.breakdown <- explainPredictions(usa.tree.one, explainer, usa.ts.one)
+cat('Breakdown Complete','\n')
+
+weights <- rowSums(pred.breakdown)
+pred.xgb = 1/(1+exp(-weights))
+cat(max(xgb.preds-pred.xgb),'\n')
+idx_to_get = as.integer(802)
+test[idx_to_get,-"left"]
+showWaterfall(usa.tree.one, explainer, usa.ts.one, model.matrix(~.+0,USA_complex1[(195:242),]),1, type = "binary")
+
 
 
 #### Heat plot for xgboost model ####
@@ -839,33 +962,33 @@ for (i in 1:length(sel_iso_xgb)){
 
 #### historical average model ####
 #' Historical avarage model to generate category predictions
-hist_dataform <- function(flu_data){
+# hist_dataform <- function(flu_data){
   
-  year <- unique(substr(rownames(flu_data),0,4))
-  year_min <- min(as.numeric(year))
-  year_max <- max(as.numeric(year))
+  # year <- unique(substr(rownames(flu_data),0,4))
+  # year_min <- min(as.numeric(year))
+  # year_max <- max(as.numeric(year))
   
   # if(year_max == 2018){
   # index_2018 <- grep("2018", rownames(flu_data))
   # flu_data <- flu_data[-index_2018,]
   # }
   
-  yr <- seq(year_min,year_max,1)
-  week <- c(seq(27,52,1),seq(1,26,1))
-  hist <- matrix(nrow = 52, ncol = length(yr))
-  for (i in 1:length(yr)){
-    year_week <- paste0(yr[i], "-", week)
-    for (j in 1:length(year_week))
-      if (year_week[j] %in% rownames(flu_data) == TRUE){
-        row_index <- grep(year_week[j],rownames(flu_data))
-        hist[j,i] <- flu_data$Y_week0[row_index]
-      }else{
-        hist[j,i] <- NA
-      }
-  }
+  # yr <- seq(year_min,year_max,1)
+  # week <- c(seq(27,52,1),seq(1,26,1))
+  # hist <- matrix(nrow = 52, ncol = length(yr))
+  # for (i in 1:length(yr)){
+    # year_week <- paste0(yr[i], "-", week)
+    # for (j in 1:length(year_week))
+      # if (year_week[j] %in% rownames(flu_data) == TRUE){
+        # row_index <- grep(year_week[j],rownames(flu_data))
+        # hist[j,i] <- flu_data$Y_week0[row_index]
+      # }else{
+        # hist[j,i] <- NA
+      # }
+  # }
   
-  colnames(hist) <- year
-  rownames(hist) <- paste0("week", week)
+  # colnames(hist) <- year
+  # rownames(hist) <- paste0("week", week)
   
   #na_index <- c()
   # for (i in 1:nrow(hist)){
@@ -876,25 +999,19 @@ hist_dataform <- function(flu_data){
   # }
   # hist <- hist[-na_index,]
   # hist <- as.data.frame(hist)
-  hist
-}
+  # hist
+# }
 
 hist_average <- function(flu_data, country,num_category, numWeek_ahead){
-  flu_data_complex <- gbm_complex(flu_data, country, num_category,numWeek_ahead)
-  flu_data_complex_four <- gbm_complex(flu_data, country, num_category,4)
-  # hist_dataset <- hist_dataform(flu_data_complex)
+  
+  flu_data_complex <- adjust.data.size(flu_data,country,num_category,numWeek_ahead)
+
   flu_data_complex <- cbind(substr(rownames(flu_data_complex), 0,4), 
                             substr(rownames(flu_data_complex),6,7),
                             flu_data_complex[,1:3]) %>% as.data.frame()
   colnames(flu_data_complex) <- c("Year","Week","Y_week0","week_1","week_2")
   flu_data_complex$Week <- as.numeric(flu_data_complex$Week)
   
-  flu_data_complex_four <- cbind(substr(rownames(flu_data_complex), 0,4), 
-                                 substr(rownames(flu_data_complex),6,7),
-                                 flu_data_complex[,1:3]) %>% as.data.frame()
-  colnames(flu_data_complex_four) <- c("Year","Week","Y_week0","week_4","week_5")
-  flu_data_complex_four$Week <- as.numeric(flu_data_complex_four$Week)
-
   pred <- matrix(NA,nrow = nrow(flu_data_complex), ncol = numWeek_ahead)
   
   if (numWeek_ahead == 1){
@@ -1025,19 +1142,19 @@ compare_accuracy_hist <- function(flu_data,country,num_category,numWeek_ahead){
   pred
 }
 
-# 8842/13603 = 0.65
+# 8050 / 11424 = 0.69
 oneWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,1)
 length(which(oneWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(oneWeek_ahead_totalAccuracy_hist)
 
-# 0.64
+# 0.68
 twoWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,2)
 length(which(twoWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(twoWeek_ahead_totalAccuracy_hist)
 
-# 0.63
+# 0.67
 threeWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,3)
 length(which(threeWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(threeWeek_ahead_totalAccuracy_hist)
 
-# 0.62
+# 0.66
 fourWeek_ahead_totalAccuracy_hist <- compare_accuracy_hist(fluWHO.incidence,sel_iso_xgb,10,4)
 length(which(fourWeek_ahead_totalAccuracy_hist$Accurate==1))/nrow(fourWeek_ahead_totalAccuracy_hist)
 
@@ -1050,7 +1167,7 @@ colnames(compareAccuracy_total_hist) <- c("nWeek_ahead","percentage")
 repeat_model <- function(flu_data,country, num_category, numWeek_ahead){
   require(dplyr)
   
-  flu_data_complex <- gbm_complex(flu_data, country, num_category,numWeek_ahead)                                  
+  flu_data_complex <- adjust.data.size(flu_data,country,num_category,numWeek_ahead)                                
   # prediction of the week is the same as the last week
   if(numWeek_ahead == 1){
     pred <- c()
@@ -1156,9 +1273,6 @@ USA_repeat_two <- repeat_model(fluWHO.incidence,'USA',10,2)
 USA_repeat_three <- repeat_model(fluWHO.incidence,'USA',10,3)
 USA_repeat_four <- repeat_model(fluWHO.incidence,'USA',10,4)
 
-intersect(intersect(intersect(USA_repeat_one$Week_time,USA_repeat_two$Week_time),USA_repeat_three$Week_time),
-          USA_repeat_four$Week_time)
-
 
 compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead){
   pred <- NULL
@@ -1176,19 +1290,19 @@ compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead)
 
 # get the total accuract for 1,2,3,4-weeks ahead
 oneWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,1)
-length(which(oneWeek_ahead_totalAccuracy$Accurate==1))  # 9641 out of 12081
-length(which(oneWeek_ahead_totalAccuracy$Accurate==1))/nrow(oneWeek_ahead_totalAccuracy) # 0.79803
+length(which(oneWeek_ahead_totalAccuracy$Accurate==1))  # 9077
+length(which(oneWeek_ahead_totalAccuracy$Accurate==1))/nrow(oneWeek_ahead_totalAccuracy) # 0.7945
 
 twoWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,2)
 length(which(twoWeek_ahead_totalAccuracy$Accurate==1)) # 8896
 length(which(twoWeek_ahead_totalAccuracy$Accurate==1))/nrow(twoWeek_ahead_totalAccuracy) # 0.7440616
 
 threeWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,3)
-length(which(threeWeek_ahead_totalAccuracy$Accurate==1)) # 8332
-length(which(threeWeek_ahead_totalAccuracy$Accurate==1))/nrow(threeWeek_ahead_totalAccuracy) #0.7043111
+length(which(threeWeek_ahead_totalAccuracy$Accurate==1)) #8021
+length(which(threeWeek_ahead_totalAccuracy$Accurate==1))/nrow(threeWeek_ahead_totalAccuracy) #0.7021183
 
 fourWeek_ahead_totalAccuracy <- compare_accuracy_repeat(fluWHO.incidence,sel_iso_xgb,10,4)
-length(which(fourWeek_ahead_totalAccuracy$Accurate==1)) # 7880
+length(which(fourWeek_ahead_totalAccuracy$Accurate==1)) # 7674
 length(which(fourWeek_ahead_totalAccuracy$Accurate==1))/nrow(fourWeek_ahead_totalAccuracy) # 0.67
 
 # plot the accuracy drop off as number of week-ahead increases
