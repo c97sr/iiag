@@ -5,10 +5,9 @@ load.iiag.data.fluView <- function(datadir="../fluView_data") {
     x <- as.character(x)
     nchar <- unlist(strsplit(x, " "))
     if (length(nchar) > 1){
-      if (length(unlist(strsplit(nchar, "."))) > 1){
+      if (length(unlist(strsplit(nchar, ".", fixed = TRUE))) > 1){
         x <- unlist(strsplit(nchar, ".", fixed = TRUE))
       }
-      
       if (length(unlist(strsplit(nchar, "%", fixed = TRUE))) > 1){
         x <- str_replace(x, "%", "PERCENTAGE OF ")
         x <- unlist(strsplit(x, " "))
@@ -41,4 +40,133 @@ load.iiag.data.fluView <- function(datadir="../fluView_data") {
   fview_ILINet
 }
 
+fix_headers <- function(x){
+  x <- as.character(x)
+  if (length(unlist(strsplit(x," "))) > 1){
+    if (length(unlist(strsplit(x, "-"))) > 1){
+      x <- unlist(strsplit(x,"-"))
+    }
+    if (length(unlist(strsplit(x, ".", fixed = TRUE))) > 1){
+      x <- unlist(strsplit(x, ".", fixed = TRUE))
+    }
+    
+    if (length(unlist(strsplit(x, "%", fixed = TRUE))) > 1){
+      x <- str_replace(x, "%", "PERCENTAGE OF")
+      x <- unlist(strsplit(x, " "))
+    }
+    if (length(unlist(strsplit(x, " "))) > 1){
+      x <- unlist(strsplit(x, " "))
+    }
+  }else{
+    x <- x
+  }
+  x <- paste0(x, collapse = "_")
+  x
+}
+
+header <- as.character(unlist(fluview[1,],use.names=FALSE))
+headernew <- c()
+for (i in 1:length(header)){
+  tmp <- fix_headers(header[i])
+  headernew <- append(headernew, tmp)
+}
+
 #' Extract incidence 
+extract.incidence.fluView <- function(fluView_data,
+                                      
+                                      week_title,
+                                      year_title,
+                                      sel_iso3,
+                                      sel_ag,
+                                      sel_measure,
+                                      minYear,
+                                      maxYear) {
+  ## reorder data by country alphabetically
+  fluView_data <- fluView_data[order(fluView_data$REGION),]
+  
+  ## Setup the week scale in a format consistent with the week format
+  ## in the data and cope with 53-week years. Needs the list of 53 week years
+  ## extending in both directions.
+  ## Perhaps should have a few lines to get rid of data NAs and avoid a warning
+  ## at the next line?
+  fluView_data$YRWEEK <- paste(fluView_data$year_title,sprintf("%02d",as.numeric(dfId$week_title)),sep="-")
+  min(dfId$ISO_YEAR)
+  yrs53Weeks <- 2015
+  currentYear <- minYear
+  vecWeekScale <- NULL
+  while (currentYear <= maxYear) {
+    if (currentYear %in% yrs53Weeks) {
+      max_week <- 53
+    } else {
+      max_week <- 52
+    }
+    vecWeekScale <- c(vecWeekScale,
+                      paste(currentYear,sprintf("%02d",1:max_week),sep="-"))
+    currentYear <- currentYear +1
+  }
+  
+  ## Define the return matrix for the function
+  sel_weeks <- vecWeekScale
+  rtnmat <- matrix(data=NA,nrow=length(sel_weeks),ncol=length(sel_iso3))
+  colnames(rtnmat) <- sel_iso3
+  rownames(rtnmat) <- sel_weeks
+  
+  ## Start outer loop over the country codes
+  for (cur_iso3 in sel_iso3) {
+    
+    ## Define criteria and subset the data
+    crit1 <- (dfId$ISO3 == cur_iso3)
+    if(!("AGEGROUP_CODE" %in% colnames(dfId))) {
+      crit2 <- TRUE
+    } else {
+      crit2 <- (dfId$AGEGROUP_CODE %in% sel_ag)
+    }
+    
+    crit3 <- (dfId$MEASURE_CODE %in% sel_measure)
+    tmpdf <- dfId[crit1 & crit2 & crit3,]
+    tmpdf <- tmpdf[order(tmpdf$yrweek),]
+    
+    ## Setup the preconditions for the nested while loops
+    max_ind_rtn <- dim(rtnmat)[1]
+    max_ind_df <- dim(tmpdf)[1]
+    cur_ind_rtn <- 1
+    cur_ind_df <- 1
+    
+    ## 2-level while loop with index "pointers" into the rtn matrix
+    ## and the dataframe. Scans through the data and the rtn matrix
+    ## at the same time and adds any none-na value that meets the
+    ## criteria for any given week. This works only because the
+    ## date format is correctly ordered by sort even though its not
+    ## a numeric and the subsetted dataframe _has_ been sorted.
+    ## Could be done with a small number of table commands, but I
+    ## (SR) wanted to be able to handle any line-by-line cleaning
+    ## in future within this loop if needed.
+    while (cur_ind_df <= max_ind_df) {
+      while (
+        sel_weeks[cur_ind_rtn] != tmpdf$yrweek[cur_ind_df] &&
+        cur_ind_rtn <= max_ind_rtn
+      ) {
+        cur_ind_rtn <- cur_ind_rtn + 1
+      }
+      if (cur_ind_rtn <= max_ind_rtn) {
+        val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
+        val_df <- as.numeric(tmpdf$ValueNumeric[cur_ind_df])
+        if (!is.na(val_df)) {
+          if (is.na(val_rtn)) {
+            rtnmat[cur_ind_rtn,cur_iso3] <- val_df
+          } else {
+            rtnmat[cur_ind_rtn,cur_iso3] <-
+              rtnmat[cur_ind_rtn,cur_iso3] + val_df
+          }
+        }
+      }
+      cur_ind_df <- cur_ind_df + 1
+    }
+    
+    ## Close the country-level loop
+  }
+  
+  ## Return the populated incidence matrix as only result of function
+  rtnmat
+  
+}

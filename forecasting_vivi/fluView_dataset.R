@@ -22,5 +22,6 @@ fview_ILINet <- load.iiag.data.fluView("C:/Users/hw3616/Desktop/Imperial/Project
 # fview_ILINet <- load.iiag.data.fluView("E:/Imperial/iiag/forecasting_vivi/fluView_data")
 
 #' Extract incidence data by states.
-
+region <- unique(fview_ILINet$REGION)
+fview_ILINet2 <- fview_ILINet[order(fview_ILINet$REGION),]
 
