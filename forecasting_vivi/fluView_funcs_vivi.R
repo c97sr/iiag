@@ -148,24 +148,49 @@ extract.incidence.fluView <- function(fluView_data,
       ) {
         cur_ind_rtn <- cur_ind_rtn + 1
       }
+      
       if (cur_ind_rtn <= max_ind_rtn) {
         val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
         val_df <- tmpdf$ILITOTAL[cur_ind_df]
+        if (as.character(val_df) == "X"){
+          val_df <- as.character(val_df)
+        }else{
+          val_df <- as.numeric(as.character(val_df))
+        }
         if (!is.na(val_df)) {
           if (is.na(val_rtn)) {
             rtnmat[cur_ind_rtn,cur_iso3] <- val_df
-          } else {
-            rtnmat[cur_ind_rtn,cur_iso3] <-
-              rtnmat[cur_ind_rtn,cur_iso3] + val_df
-          }
+          } 
         }
       }
       cur_ind_df <- cur_ind_df + 1
     }
-    browser()
-    ## Close the country-level loop
+  
+    ## Close the state-level loop
   }
   
   ## Return the populated incidence matrix as only result of function
   rtnmat
+}
+
+while (cur_ind_df <= max_ind_df) {
+  while (
+    sel_weeks[cur_ind_rtn] != tmpdf$YRWEEK[cur_ind_df] &&
+    cur_ind_rtn <= max_ind_rtn
+  ) {
+    cur_ind_rtn <- cur_ind_rtn + 1
+  }
+  if (cur_ind_rtn <= max_ind_rtn) {
+    val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
+    val_df <- tmpdf$ILITOTAL[cur_ind_df]
+    if (!is.na(val_df)) {
+      if (is.na(val_rtn)) {
+        rtnmat[cur_ind_rtn,cur_iso3] <- val_df
+      } else {
+        rtnmat[cur_ind_rtn,cur_iso3] <-
+          rtnmat[cur_ind_rtn,cur_iso3] + val_df
+      }
+    }
+  }
+  cur_ind_df <- cur_ind_df + 1
 }
