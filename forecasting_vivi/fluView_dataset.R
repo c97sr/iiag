@@ -22,6 +22,12 @@ fview_ILINet <- load.iiag.data.fluView("C:/Users/hw3616/Desktop/Imperial/Project
 # fview_ILINet <- load.iiag.data.fluView("E:/Imperial/iiag/forecasting_vivi/fluView_data")
 
 #' Extract incidence data by states.
-region <- unique(fview_ILINet$REGION)
-fview_ILINet2 <- fview_ILINet[order(fview_ILINet$REGION),]
+# region <- unique(fview_ILINet$REGION)
 
+fview_incidence <- extract.incidence.fluView(fview_ILINet,
+                                             sel_states = unique(fview_ILINet$REGION),
+                                             minYear = 2010,
+                                             maxYear = 2019)
+
+minprop <- 0.5
+states_ind <- names(which(colSums(is.na(fview_incidence))/dim(fview_incidence)[1]<minprop))
