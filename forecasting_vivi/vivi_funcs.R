@@ -257,9 +257,8 @@ xgboost_dat <- function(flu_data_complex, start_year, end_year){
 
 
 #' XGBoost model
-#' train_num_start: to calculate start year of trainign set. The origin is 2010, 0 represents 2010, 1 represents 2010+1=2011
-#' , and on 
-#' train_num_end: to calculate the end year of traingin set. End year = start year + train_num_end 
+#' train_num_start: calculates start year of trainign set. The origin is 2010, 0 represents 2010, 1 represents 2010+1=2011
+#' train_num_end: calculates the end year of traingin set. End year = start year + train_num_end 
 #' = 2010 + train_num_start +train_num_end
 xgboost.model.pred <- function(flu_data, country, num_category,
                                train_num_start, train_num_end, nWeek_ahead){
@@ -753,3 +752,103 @@ compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead)
   pred
   
 }
+
+#### functions for plotting ####
+
+#' discrete data against raw data
+#' Plot raw incidence data and categorical data in the same graph by dual axis is not clear for visualizing
+#' So I will plot them into two seperate graphs but one is above another one
+#' data: incidenc dataset; country: ISO3 code; countryName: full country name
+rawData_TS_plot <- function(data, country,countryName){
+  require(ggplot2)
+  require(grid)
+  
+  count <- data[, which(colnames(data)==country)]
+  week_time <- rownames(data)[-which(is.na(count))]
+  count <- count[-(which(is.na(count)))]
+  category <- cut_interval(count, 10)
+  raw_data <- cbind(week_time, count, category)
+  
+  raw_data <- as.data.frame(raw_data)
+  colnames(raw_data) <- c('week_time','count','category')
+  
+  # convert discrete week time to contious time series 
+  raw_data$weekTS <- gsub("-", "-W", raw_data$week_time, fixed = TRUE)
+  raw_data$weekTS <- week2date(raw_data$weekTS)
+  raw_data$count <- as.numeric(as.character(raw_data$count))
+  raw_data$category <- as.numeric(as.character(raw_data$category))
+  
+  # first plot the time series of numeric incidence
+  grobTS <- grobTree(textGrob(countryName, x=0.85,  y=0.9, hjust=0,
+                              gp=gpar(col="black", fontsize=14, fontface="bold")))
+  p1 <- ggplot(raw_data, aes(x = weekTS))
+  p1 <- p1 + geom_line(aes(y = count),colour = "salmon",size=1)
+  p1 <- p1 + scale_y_continuous(expand = c(0, 0))
+  # p1 <- p1 + scale_x_continuous(breaks = c(2010:2018))
+  # p1 <- p1 + scale_colour_manual(values = "salmon")
+  p1 <- p1 + labs(y = "Incidence",
+                  x = "Time",
+                  # colour = "Obsevation",
+                  title = "Time series of numeric observations of incidence")
+  p1 <- p1 + theme_bw() + 
+    theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))+
+    annotation_custom(grobTS)
+  
+  # secondly plot the time series of categorical incidence
+  p2 <- ggplot(raw_data, aes(x = weekTS))
+  p2 <- p2 + geom_line(aes(y = category),colour = "darkslategray2",size=1)
+  # p2 <- p2 + scale_x_continuous(breaks = c(2010:2018))
+  p2 <- p2 + scale_y_continuous(breaks = c(1:10),expand = c(0, 0))
+  # p2 <- p2 + scale_colour_manual(values = "darkslategray2")
+  p2 <- p2 + labs(y = "Incidence",
+                  x = "Time",
+                  # colour = "Obsevation",
+                  title = "Time series of categorical observations of incidence")
+  p2 <- p2 + theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+                                panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+  grid.newpage()
+  grid.draw(rbind(ggplotGrob(p1), ggplotGrob(p2), size = "last"))
+  
+}
+
+#' time series plot for prediction
+#' pred: prediction results from xgboost.model.pred function
+predTS_plot <- function(pred){
+  # change week into format used for aweek package
+  pred$weekTS <- gsub("-", "-W", pred$week_time, fixed = TRUE)
+  
+  # the aweek package is used to convert from epidemiological weeks to dates
+  pred$weekTS <- week2date(pred$weekTS)
+  
+  # convert numbers from factors to numerics
+  pred$Observation <- as.numeric(as.character(pred$Observation))
+  pred$Prediction <- as.numeric(as.character(pred$Prediction))
+  
+  p <- ggplot(pred, aes(x = weekTS))
+  
+  # plot observational category 
+  p <- p + geom_point(aes(y = Observation, color = "Observation"),size=3)
+  p <- p + geom_line(aes(y = Observation, color = "Observation"),size=0.8)
+  
+  # plot predicted category
+  p <- p + geom_point(aes(y = Prediction, color = "Prediction"),size=3)
+  p <- p + geom_line(aes(y = Prediction, color = "Prediction"),size=0.8)
+  
+  # use segment to show the difference between prediction and obsercation more clearly
+  # p <- p + geom_segment(aes(xend = weekTS, yend = Prediction), alpha = .2)
+  
+  # modifying colours and theme options
+  p <- p + scale_colour_manual(values = c("darkslategray2", "salmon"))
+  p <- p + scale_y_continuous(breaks = c(1:10))
+  p <- p + labs(y = "Category",
+                x = "Time",
+                colour = "Category")
+  p <- p + theme(legend.position = c(0.8,0.85))
+  
+  p
+}
+
+
+
+

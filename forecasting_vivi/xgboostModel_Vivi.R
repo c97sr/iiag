@@ -501,3 +501,185 @@ compareAccuracy_total$nWeek_ahead <- factor(compareAccuracy_total$nWeek_ahead,
 compareAccuracy_total$accuracy <- as.numeric(as.character(compareAccuracy_total$accuracy))
 compareAccuracy_total$percentage <- as.numeric(as.character(compareAccuracy_total$percentage))
 compareAccuracy_total$percentage <- factor(compareAccuracy_total$percentage,levels = c(0,0.2,0.4,0.6,0.8,1))
+
+
+#### plots ####
+#' Plot world distribution of countries.
+#' Extract geographic information of countries. 
+#' To fill different colors in temperate and non-temperate, 
+#' I will give every country a level to distinguish 
+country_region <- c()
+for (i in 1:length(sel_iso_xgb)){
+  index <- grep(sel_iso_xgb[i],countryISO$ISO3)
+  tmp <- countryISO[index,]
+  country_region <- rbind(country_region, tmp)
+}
+
+for (i in 1:nrow(country_region)){
+  if (country_region$Latitude[i] >= 23.25 | country_region$Latitude[i] <= -23.25){
+    country_region$Region[i] <- "temperate"
+  }
+  if (country_region$Latitude[i] < 23.25 && country_region$Latitude[i] > -23.25){
+    country_region$Region[i] <- "non-temperate"
+  }
+}
+
+for (i in 1:nrow(country_region)){
+  if (country_region$Latitude[i] > 0){
+    country_region$Hemisphere[i] <- "Nothern hemisphere"
+  }
+  if (country_region$Latitude[i] < 0){
+    country_region$Hemisphere[i] <- "Southern hemisphere"
+  }
+}
+country_region$Region <- as.factor(country_region$Region)
+
+length(which(country_region$Region == "temperate")) # 41
+which(country_region$Region == "non-temperate") # 0
+which(country_region$Hemisphere == "Southern hemisphere") # 0
+
+#' change the country names in country_idd to the same as in world map
+world_map <- map_data ("world")
+which(country_region$Country %in% unique(world_map$region)==FALSE) # 26 35 40
+
+country_region$Country[c(26,35,40)] # Moldova, Republic of Russian Federation, United States 
+
+mapCountry <- country_region$Country
+country_region <- cbind(country_region$Country, mapCountry, country_region[,(2:6)])
+colnames(country_region) <- c("Country","mapCountry",colnames(country_region)[3:7])
+country_region$mapCountry <- as.character(country_region$mapCountry)
+
+country_region$mapCountry[26] <- "Moldova"
+country_region$mapCountry[35] <- "Russia" 
+country_region$mapCountry[40] <- "USA"
+country_region$mapCountry <- as.factor(country_region$mapCountry)
+
+myCountries <- NULL
+for (i in 1:nrow(country_region)){
+  if((country_region$mapCountry[i] %in% unique(world_map$region)) == TRUE)
+    tmp <- world_map[which(country_region$mapCountry[i] == world_map$region),]
+  myCountries <- rbind(myCountries, tmp)
+}
+
+for (i in 1:nrow(myCountries)){
+  if (myCountries$region[i] %in% country_region$mapCountry[which(country_region$Region == "temperate")] == TRUE){
+    myCountries$Region[i] <- "temperate"
+  }
+  if(myCountries$region[i] %in% country_region$mapCountry[which(country_region$Region == "temperate")] == FALSE){
+    myCountries$Region[i] <- "non-temperate"
+  }
+}
+
+
+xgb_country_map <- borders("world", colour="gray50", fill="gray50")
+ggplot() +  xgb_country_map +
+  geom_polygon(data = myCountries, 
+               aes(x = long, y = lat, group = group, fill = Region), color = "white")+
+  scale_fill_manual(values = c("red","blue"))+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank())
+
+#' Visulizations of data
+#' comparison between raw numeric incidence data and categorical data
+# example
+rawData_TS_plot(fluWHO.incidence,"ARM","Armenia")
+
+#'save time series plot into work directory
+for (i in 1:nrow(country_region)){
+  pdf(paste0(country_region$Country[i],".pdf"))
+  print(rawData_TS_plot(fluWHO.incidence,country_region$ISO3[i], country_region$Country[i]))
+  dev.off()
+}
+
+#' visulization of predictions results against actual values
+# example: USA
+USA_pred15 <- xgboost.model.pred(fluWHO.incidence,"USA",10,0,4,1)
+USA_pred16 <- xgboost.model.pred(fluIliCountryData,"USA",10,1,4,1)
+USA_pred17 <- xgboost.model.pred(fluIliCountryData,"USA",10,2,4,1)
+predTS_plot(USA_pred15)
+predTS_plot(USA_pred16)
+predTS_plot(USA_pred17)
+
+#' time series plot for 6-year training and 1-year test
+#' and save them to work directory
+for (i in 1:length(sel_iso_xgb)){
+  pdf(paste0(country_region$Country[i],".pdf"))
+  forecast_result <- xgboost.model.pred(fluWHO.incidence, sel_iso_xgb[i],10,0,6,1)
+  print(predTS_plot(forecast_result))
+  dev.off()
+}
+
+#' plot the accuracy of historical model that the accuracy will keep roughlt stable as the number 
+#' of week ahead forecast increases
+# create a text
+grob_hist <- grobTree(textGrob("B", x=0.8,  y=0.95, hjust=0,
+                               gp=gpar(col="black", fontsize=24, fontface="bold")))
+
+ggplot(data = compareAccuracy_total_hist, aes(x = nWeek_ahead, y = percentage, group = 1)) +
+  geom_line(size=1,colour="darkgreen")+
+  geom_point(size=3,colour="darkgreen")+
+  scale_y_continuous("Percentage of accurate forecst", breaks = c(0.00,0.25,0.50,0.75,1), limits = c(0,1),
+                     expand = c(0, 0))+
+  xlab("n-week ahead")+ 
+  theme_bw()+
+  annotation_custom(grob_hist)
+
+#' plot the accuracy of repeat model that the accuracy drops off as the numebr of week ahead forecasted 
+#' increases
+
+# Create a text
+grob_repeat <- grobTree(textGrob("A", x=0.8,  y=0.95, hjust=0,
+                                 gp=gpar(col="black", fontsize=24, fontface="bold")))
+
+ggplot(data = compareAccuracy_total, aes(x = nWeek_ahead, y = percentage, group = 1)) +
+  geom_line(size=1,colour="darkgreen")+
+  geom_point(size=3,colour="darkgreen")+
+  scale_y_continuous("Percentage of accurate forecst", breaks = c(0.00,0.25,0.50,0.75,1), limits = c(0,1),
+                     expand = c(0, 0))+
+  xlab("n-week ahead")+
+  theme_bw()+
+  annotation_custom(grob_repeat)
+
+#' plot the distribution of categories
+category <- NULL
+for (i in 1:length(sel_iso_xgb)){
+  tmp <- gbm_complex(fluWHO.incidence,sel_iso_xgb[i],10)
+  tmp <- cbind(rep(sel_iso_xgb[i],nrow(tmp)),tmp)
+  category <- rbind(category, tmp)
+}
+colnames(category) <- c("CountryCode",colnames(category)[2:6])
+
+categorySummaryChart <- cbind(c(1:10),c(length(which(category$Y_week0==1)),length(which(category$Y_week0==2)),
+                                        length(which(category$Y_week0==3)),length(which(category$Y_week0==4)),
+                                        length(which(category$Y_week0==5)),length(which(category$Y_week0==6)),
+                                        length(which(category$Y_week0==7)),length(which(category$Y_week0==8)),
+                                        length(which(category$Y_week0==9)),length(which(category$Y_week0==10))))%>%
+  as.data.frame()
+colnames(categorySummaryChart) <- c("Category","Count")
+categorySummaryChart$Density <- round(categorySummaryChart$Count/sum(categorySummaryChart$Count),3)
+
+# Change the width of bars
+ggplot(data=categorySummaryChart, aes(x=Category, y=Density)) +
+  geom_bar(stat="identity", width=1, colour = "white", fill="steelblue")+
+  scale_x_continuous("Category", breaks = c(1:10))+
+  scale_y_continuous("Density",expand = c(0, 0),limits = c(0,1.00))+
+  geom_text(aes(label=Density), vjust=-0.2, size=3.5)+
+  # geom_text(aes(label=Density), vjust=1.6, color="white", size=3.5)+
+  theme_bw()
+
+ggplot(category, aes(x=Y_week0)) + 
+  geom_histogram(aes(y=..density..), fill = "steelblue", binwidth = 1)+
+  #scale_x_continuous("Category", breaks = c(1:10), limits = c(1,10))+
+  # scale_y_continuous("Density",expand = c(0, 0))+
+  xlab("Category")+
+  ylab("Density")+
+  theme_bw()
