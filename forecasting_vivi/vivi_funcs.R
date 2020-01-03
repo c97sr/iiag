@@ -850,5 +850,15 @@ predTS_plot <- function(pred){
 }
 
 
-
-
+#' pick up European countries 
+euro_countries <- function(countries){
+  require(eurostat)
+  data("eu_countries")
+  euro <- c()
+  for (i in 1:nrow(countries)){
+    if (as.character(countries$Country[i]) %in% as.character(eu_countries$name)){
+      tmp <- countries[i,]
+      euro <- rbind(euro,tmp)
+    }
+  }
+}

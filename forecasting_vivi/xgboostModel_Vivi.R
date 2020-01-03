@@ -32,6 +32,7 @@ library("devtools") # to install package from github
 # install_github("AppliedDataSciencePartners/xgboostExplainer")
 # library("xgboostExplainer") # to interpret every single tree 
 # library("pROC")
+library("eurostat")
 
 
 # load(file = "fluIliCountryData.rda")
@@ -539,7 +540,7 @@ which(country_region$Region == "non-temperate") # 0
 which(country_region$Hemisphere == "Southern hemisphere") # 0
 
 #' change the country names in country_idd to the same as in world map
-world_map <- map_data ("world")
+world_map <- map_data("world")
 which(country_region$Country %in% unique(world_map$region)==FALSE) # 26 35 40
 
 country_region$Country[c(26,35,40)] # Moldova, Republic of Russian Federation, United States 
@@ -683,3 +684,7 @@ ggplot(category, aes(x=Y_week0)) +
   xlab("Category")+
   ylab("Density")+
   theme_bw()
+
+#' pick up European countries in the dataset
+eu_countries_region <- euro_countries(country_region)
+eu_xgb <- as.character(eu_countries_region$ISO3)
