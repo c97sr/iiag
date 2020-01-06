@@ -849,6 +849,16 @@ predTS_plot <- function(pred){
   p
 }
 
+#' Check if countries names is same as names in "maps" package
+map.country.name <- function(using_country_name){
+  require(maps)
+  
+  world_map <- map_data("world")
+  index <- which(using_country_name %in% unique(world_map$region)==FALSE)
+  index
+  
+}
+
 
 #' pick up European countries 
 euro_countries <- function(countries){
@@ -861,4 +871,6 @@ euro_countries <- function(countries){
       euro <- rbind(euro,tmp)
     }
   }
+  euro
 }
+
