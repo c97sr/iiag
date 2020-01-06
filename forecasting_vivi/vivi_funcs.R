@@ -323,12 +323,19 @@ compare_accuracy <- function(country_list,num_category, train_num_start, train_n
                                           train_num_start, train_num_end,nWeek_ahead)
     individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
-    
+
   }
-  
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country","week_time","Observation","Prediction","Accurate")
-  pred
+  
+  score <- length(which(pred$Accurate == 1))/nrow(pred)
+  
+  result <- NULL
+  result$pred <- pred
+  result$score <- score
+  
+  return(result)
+
 }
 
 
@@ -629,7 +636,14 @@ compare_accuracy_hist <- function(flu_data,country,num_category,numWeek_ahead){
   }
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country",colnames(pred)[2:ncol(pred)])
-  pred
+  
+  score <- length(which(pred$Accurate == 1))/nrow(pred)
+  
+  result <- NULL
+  result$pred <- pred
+  result$score <- score
+  
+  return(result)
 }
 
 #### repeat model ####
@@ -749,7 +763,14 @@ compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead)
   }
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country",colnames(pred)[2:ncol(pred)])
-  pred
+  
+  score <- length(which(pred$Accurate == 1))/nrow(pred)
+  
+  result <- NULL
+  result$pred <- pred
+  result$score <- score
+  
+  return(result)
   
 }
 
@@ -849,16 +870,6 @@ predTS_plot <- function(pred){
   p
 }
 
-#' Check if countries names is same as names in "maps" package
-map.country.name <- function(using_country_name){
-  require(maps)
-  
-  world_map <- map_data("world")
-  index <- which(using_country_name %in% unique(world_map$region)==FALSE)
-  index
-  
-}
-
 
 #' pick up European countries 
 euro_countries <- function(countries){
@@ -873,4 +884,15 @@ euro_countries <- function(countries){
   }
   euro
 }
+
+#' Check if countries names is same as names in "maps" package
+map.country.name <- function(using_country_name){
+  require(maps)
+  
+  world_map <- map_data("world")
+  index <- which(using_country_name %in% unique(world_map$region)==FALSE)
+  index
+  
+}
+
 

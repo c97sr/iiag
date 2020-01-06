@@ -9,6 +9,7 @@ rm(list = ls(all = TRUE))
 # library('idd') # WHO influenza-likeness-illness data; idd package is not available (for R version 3.6.1)
 library('ggplot2') # transform integer numbers to categorical variable
 library('xgboost') # boosted regression tree
+
 library('formattable') # formatting on data frames
 library('gtools') # permutations
 library("lattice") # heat plot
@@ -32,6 +33,7 @@ library("devtools") # to install package from github
 # install_github("AppliedDataSciencePartners/xgboostExplainer")
 # library("xgboostExplainer") # to interpret every single tree 
 # library("pROC")
+library("maps")
 library("eurostat")
 
 
@@ -275,165 +277,6 @@ for (i in 1:length(sel_iso_xgb)){
 
 
 #### historical average model ####
-#' Historical avarage model to generate category predictions
-# hist_dataform <- function(flu_data){
-  
-  # year <- unique(substr(rownames(flu_data),0,4))
-  # year_min <- min(as.numeric(year))
-  # year_max <- max(as.numeric(year))
-  
-  # if(year_max == 2018){
-  # index_2018 <- grep("2018", rownames(flu_data))
-  # flu_data <- flu_data[-index_2018,]
-  # }
-  
-  # yr <- seq(year_min,year_max,1)
-  # week <- c(seq(27,52,1),seq(1,26,1))
-  # hist <- matrix(nrow = 52, ncol = length(yr))
-  # for (i in 1:length(yr)){
-    # year_week <- paste0(yr[i], "-", week)
-    # for (j in 1:length(year_week))
-      # if (year_week[j] %in% rownames(flu_data) == TRUE){
-        # row_index <- grep(year_week[j],rownames(flu_data))
-        # hist[j,i] <- flu_data$Y_week0[row_index]
-      # }else{
-        # hist[j,i] <- NA
-      # }
-  # }
-  
-  # colnames(hist) <- year
-  # rownames(hist) <- paste0("week", week)
-  
-  #na_index <- c()
-  # for (i in 1:nrow(hist)){
-  # if(length(which(is.na(hist[i,]))) >= 3){
-  # tmp <- i
-  # na_index <- append(na_index, tmp)
-  # }
-  # }
-  # hist <- hist[-na_index,]
-  # hist <- as.data.frame(hist)
-  # hist
-# }
-
-hist_average <- function(flu_data, country,num_category, numWeek_ahead){
-  
-  flu_data_complex <- adjust.data.size(flu_data,country,num_category,numWeek_ahead)
-
-  flu_data_complex <- cbind(substr(rownames(flu_data_complex), 0,4), 
-                            substr(rownames(flu_data_complex),6,7),
-                            flu_data_complex[,1:3]) %>% as.data.frame()
-  colnames(flu_data_complex) <- c("Year","Week","Y_week0","week_1","week_2")
-  flu_data_complex$Week <- as.numeric(flu_data_complex$Week)
-  
-  pred <- matrix(NA,nrow = nrow(flu_data_complex), ncol = numWeek_ahead)
-  
-  if (numWeek_ahead == 1){
-    for (i in 1:nrow(flu_data_complex)){
-      yr <- flu_data_complex$Year[i]
-      week <- flu_data_complex$Week[i]-1
-      obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
-      obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i,] <- which.max(tabulate(obs))
-    }
-    
-    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
-      as.data.frame()
-    colnames(pred) <- c("Week_time","OneWeek_ahead", "Observation")
-
-    # accuracy
-    for (i in 1:nrow(pred)){
-      if (is.na(pred[i,2])==TRUE || is.na(pred[i,3])==TRUE){
-        pred$accurate[i] <- NA
-      }else{
-        if (pred[i,2]==pred[i,3]){
-          pred$Accurate[i] <- 1
-        }else{
-          pred$Accurate[i] <- 0
-        }
-      }
-    }
-  }
-  
-  if (numWeek_ahead == 2){
-    for (i in 1:nrow(flu_data_complex)){
-      yr <- flu_data_complex$Year[i]
-      week <- flu_data_complex$Week[i]-2
-      obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
-      obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i,] <- which.max(tabulate(obs))
-    }
-    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
-      as.data.frame()
-    colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","Observation")
-    
-    # accuracy
-    for (i in 1:nrow(pred)){
-      if (is.na(pred[i,3])==TRUE || is.na(pred[i,4])==TRUE){
-        pred$accurate[i] <- NA
-      }else{
-        if (pred[i,3]==pred[i,4]){
-          pred$Accurate[i] <- 1
-        }else{
-          pred$Accurate[i] <- 0
-        }
-      }
-    }
-  }
-  
-  if (numWeek_ahead == 3){
-    for (i in 1:nrow(flu_data_complex)){
-      yr <- flu_data_complex$Year[i]
-      week <- flu_data_complex$Week[i]-3
-      obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
-      obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i,] <- which.max(tabulate(obs))
-    }
-    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
-      as.data.frame()
-    colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","ThreeWeek_ahead","Observation")
-    
-    # accuracy
-    for (i in 1:nrow(pred)){
-      if (is.na(pred[i,4])==TRUE || is.na(pred[i,5])==TRUE){
-        pred$accurate[i] <- NA
-      }else{
-        if (pred[i,4]==pred[i,5]){
-          pred$Accurate[i] <- 1
-        }else{
-          pred$Accurate[i] <- 0
-        }
-      }
-    }
-  }
-  
-  if (numWeek_ahead == 4){
-    for (i in 1:nrow(flu_data_complex)){
-      yr <- flu_data_complex$Year[i]
-      week <- flu_data_complex$Week[i]-4
-      obsTem <- flu_data_complex[which(flu_data_complex$Week==week),]
-      obs <- obsTem$Y_week0[which(obsTem$Year != yr)]
-      pred[i,] <- which.max(tabulate(obs))
-    }
-    pred <- cbind(rownames(flu_data_complex),pred,flu_data_complex$Y_week0) %>% 
-      as.data.frame()
-    colnames(pred) <- c("Week_time","OneWeek_ahead", "TwoWeek_ahead","ThreeWeek_ahead","FourWeek_ahead","Observation")
-    
-    # accuracy
-    for (i in 1:nrow(pred)){
-      if (is.na(pred[i,5])==TRUE || is.na(pred[i,6])==TRUE){
-        pred$accurate[i] <- NA
-      }else{
-        if (pred[i,5]==pred[i,6]){
-          pred$Accurate[i] <- 1
-        }else{
-          pred$Accurate[i] <- 0
-        }
-      }
-    }
-  }
-  pred
-}
 
 # example 
 USA_hist_pred_one <- hist_average(fluWHO.incidence,"USA",10,1)
@@ -541,7 +384,8 @@ which(country_region$Hemisphere == "Southern hemisphere") # 0
 
 #' change the country names in country_idd to the same as in world map
 world_map <- map_data("world")
-which(country_region$Country %in% unique(world_map$region)==FALSE) # 26 35 40
+map.country.name(country_region$Country) # 26 35 40
+# which(country_region$Country %in% unique(world_map$region)==FALSE) # 26 35 40
 
 country_region$Country[c(26,35,40)] # Moldova, Republic of Russian Federation, United States 
 
@@ -686,5 +530,78 @@ ggplot(category, aes(x=Y_week0)) +
   theme_bw()
 
 #' pick up European countries in the dataset
+# geography information of Euro countries
 eu_countries_region <- euro_countries(country_region)
+
+#' ISO3 codes will be used through analysis
+# ISO3 code of Euro countries
 eu_xgb <- as.character(eu_countries_region$ISO3)
+
+
+# incidence data of Euro countries
+fluEuro.incidence <- extract.incidence.who(fluWHO,
+                                           sel_iso3 = eu_xgb,
+                                           sel_ag = c("All"),
+                                           sel_measure = c("ILI_CASES"),
+                                           minYear=2010,
+                                           maxYear = 2018)
+#' visualize Euro countries in a map
+# Euro countries in package "maps"
+# eu_xgb_counties will be only used in plotting Euro map
+eu_xgb_countries <- eu_countries_region$mapCountry
+
+eu_xgb_map <- NULL
+for (i in 1:length(eu_xgb_countries)){
+  if((eu_xgb_countries[i] %in% unique(world_map$region)) == TRUE)
+    tmp <- world_map[which(eu_xgb_countries[i] == world_map$region),]
+  eu_xgb_map <- rbind(eu_xgb_map, tmp)
+  eu_xgb_map
+}
+eu_xgb_map$continent <- "Euro"
+
+# Retrievethe map data
+map.country.name(eu_countries$name) # 3, 28
+eu_countries$name[c(3,28)] # Czechia, United Kingdom
+eu_countries$mapName <- eu_countries$name
+eu_countries$mapName[3] <- "UK"
+eu_countries$mapName[28] <- "Czech Republic" 
+eu.maps <- map_data("world", region = eu_countries$mapName)
+
+
+# Compute the centroid as the mean longitude and lattitude
+# Used as label coordinate for country's names
+region.lab.data <- eu.maps %>%
+  group_by(region) %>%
+  summarise(long = mean(long), lat = mean(lat))
+
+xgb_euro_map <- borders("world", regions = eu_countries$mapName, colour="gray50", fill="white")
+ggplot() +  xgb_euro_map +
+  geom_polygon(data = eu_xgb_map, 
+               aes(x = long, y = lat, group = group,fill = continent), color = "white")+
+  geom_text(aes(x = long, y = lat, label = region), data = region.lab.data,  size = 3, hjust = 0.5)+
+  # scale_fill_manual(values = c("salmon"))+
+  theme_bw()+
+  theme(legend.position = "none",
+        axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.x=element_blank(),
+        axis.title.y=element_blank(),
+        panel.border = element_blank(), 
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.line = element_blank())
+
+#' results of Euro
+# 1-week ahead, 2010-2014 training, 2015 test
+Euro_accuracy_15 <- compare_accuracy(eu_xgb,10,0,4,1)
+
+# 1-week ahead, 2011-2015 training, 2016 test
+Euro_accuracy_16 <- compare_accuracy(eu_xgb,10,1,4,1)
+
+# 1-week ahead, 2012-2016 training, 2017 & 2018 test
+Euro_accuracy_1718 <- compare_accuracy(eu_xgb,10,2,4,1)
+
+# 1-week ahead, 2010-2016 training, 2016 test
+Euro_accuracy_1016_1718 <- compare_accuracy(eu_xgb,10,0,6,1)
+
