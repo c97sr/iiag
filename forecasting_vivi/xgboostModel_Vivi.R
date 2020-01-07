@@ -593,15 +593,25 @@ ggplot() +  xgb_euro_map +
         axis.line = element_blank())
 
 #' results of Euro
+#' Following is the average accuracy scores of Euro with different traing length
 # 1-week ahead, 2010-2014 training, 2015 test
-Euro_accuracy_15 <- compare_accuracy(eu_xgb,10,0,4,1)
+Euro_accuracy_15 <- compare_accuracy(eu_xgb,fluEuro.incidence,10,0,4,1)
 
 # 1-week ahead, 2011-2015 training, 2016 test
-Euro_accuracy_16 <- compare_accuracy(eu_xgb,10,1,4,1)
+Euro_accuracy_16 <- compare_accuracy(eu_xgb,fluEuro.incidence,10,1,4,1)
 
 # 1-week ahead, 2012-2016 training, 2017 & 2018 test
-Euro_accuracy_1718 <- compare_accuracy(eu_xgb,10,2,4,1)
+Euro_accuracy_1718 <- compare_accuracy(eu_xgb,fluEuro.incidence,10,2,4,1)
 
 # 1-week ahead, 2010-2016 training, 2016 test
-Euro_accuracy_1016_1718 <- compare_accuracy(eu_xgb,10,0,6,1)
+Euro_accuracy_1016_1718 <- compare_accuracy(eu_xgb,fluEuro.incidence,10,0,6,1)
 
+
+#' Following is accuracy score of each individual country in Euro
+
+Euro_accuracyIndi_15 <- NULL
+for (i in 1:length(eu_xgb)){
+  tmp <- compare_accuracy_indi(eu_xgb[i],fluEuro.incidence, 10,0,4,1)
+  Euro_accuracyIndi_15 <- append(Euro_accuracyIndi_15, tmp)
+  
+}

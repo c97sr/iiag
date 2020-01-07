@@ -148,10 +148,17 @@ extract.incidence.who <- function( dfId,
   
 }
 
+#' Function that helps identify correponding country's full name according to ISO3 code
+iso3_country <- function(iso3_code){
+  country <- countryISO$Country[which(iso3_code == countryISO$ISO3)]
+  
+  return(country)
+}
+
 
 #' extract_incidence is the function in package idd which can'y be loaded
 #' therefore copy the code 
-extract_incidence.idd <- function(flu_data,
+extract.incidence.idd <- function(flu_data,
                                   country_code,
                                   year) {
   flu_data <- as.data.frame(flu_data)
@@ -314,12 +321,30 @@ xgboost.model.pred <- function(flu_data, country, num_category,
   pred_timeseries
 }
 
+#' Function that gives individual country forecast result and accuracy score
+compare_accuracy_indi <- function(individual_country, flu_data, num_category,train_num_start, 
+                                  train_num_end,nWeek_ahead){
+  individual_pred <- xgboost.model.pred(fluWHO.incidence,individual_country,num_category,
+                                        train_num_start, train_num_end,nWeek_ahead)
+  individual_pred <- cbind(rep(individual_country, nrow(individual_pred)),individual_pred)
+  individual_pred <- as.data.frame(individual_pred)
+  colnames(individual_pred) <- c("Country","week_time","Observation","Prediction","Accurate")
+  
+  score <- length(which(individual_pred$Accurate == 1))/nrow(individual_pred)
+  
+  result <- NULL
+  result$individual_pred <- individual_pred
+  result$score <- score
+  
+  return(result)
+}
+
 
 #' Function of caculating the accuracy metric of xgboost model
-compare_accuracy <- function(country_list,num_category, train_num_start, train_num_end,nWeek_ahead){
+compare_accuracy <- function(country_list,flu_data,num_category, train_num_start, train_num_end,nWeek_ahead){
   pred <- NULL
   for (i in 1:length(country_list)){
-    individual_pred <- xgboost.model.pred(fluWHO.incidence,country_list[i],num_category,
+    individual_pred <- xgboost.model.pred(flu_data,country_list[i],num_category,
                                           train_num_start, train_num_end,nWeek_ahead)
     individual_pred <- cbind(rep(country_list[i], nrow(individual_pred)),individual_pred)
     pred <- rbind(pred,individual_pred)
