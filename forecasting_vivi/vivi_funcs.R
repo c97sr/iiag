@@ -324,7 +324,8 @@ xgboost.model.pred <- function(flu_data, country, num_category,
 #' Function that gives individual country forecast result and accuracy score
 compare_accuracy_indi <- function(individual_country, flu_data, num_category,train_num_start, 
                                   train_num_end,nWeek_ahead){
-  individual_pred <- xgboost.model.pred(fluWHO.incidence,individual_country,num_category,
+  country_list <- individual_country
+  individual_pred <- xgboost.model.pred(fluWHO.incidence,country_list,num_category,
                                         train_num_start, train_num_end,nWeek_ahead)
   individual_pred <- cbind(rep(individual_country, nrow(individual_pred)),individual_pred)
   individual_pred <- as.data.frame(individual_pred)
@@ -920,4 +921,20 @@ map.country.name <- function(using_country_name){
   
 }
 
+#' Tidy up accuracy scores of countries into a dataframe
+accuracy_score <- function(forecast_result, country_code){
+  dataframe <- matrix(NA, nrow = length(country_code), ncol = 2)
+  
+  for (i in 1:length(country_code)){
+       dataframe[i,1] <- country_code[i]
+        dataframe[i,2] <- forecast_result[[i*2]]
+    }
+
+  dataframe <- as.data.frame(dataframe)
+  colnames(dataframe) <- c("Country","Accuracy_score")
+  
+  dataframe$Accuracy_score <- round(as.numeric(as.character(dataframe$Accuracy_score)),3)
+
+  return(dataframe)
+}
 

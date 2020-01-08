@@ -615,3 +615,6 @@ for (i in 1:length(eu_xgb)){
   Euro_accuracyIndi_15 <- append(Euro_accuracyIndi_15, tmp)
   
 }
+
+#' Following is the dataframe of accuracy score of all individual country 
+Euro_accuracyIndi_15_df <- accuracy_score(Euro_accuracyIndi_15, eu_xgb)
