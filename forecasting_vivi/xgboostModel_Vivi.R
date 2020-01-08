@@ -617,4 +617,61 @@ for (i in 1:length(eu_xgb)){
 }
 
 #' Following is the dataframe of accuracy score of all individual country 
-Euro_accuracyIndi_15_df <- accuracy_score(Euro_accuracyIndi_15, eu_xgb)
+Euro_accuracyIndi_1718_df <- accuracy_score(Euro_accuracyIndi_15, eu_xgb)
+
+
+
+# write.csv(Euro_accuracyIndi_1718_df, "Euro_accuracy_score.csv")
+
+#' Heat plot
+
+# Euro
+
+forecast_result <- NULL
+for (i in 1:length(eu_xgb)){
+  tmp <-  xgboost.model.pred(fluEuro.incidence, eu_xgb[i], 10, 2, 4, 1)
+  forecast_result <- rbind(forecast_result, tmp)
+}
+pdf("Europe.pdf")
+frequency_table <- freq_table(forecast_result, 10)
+print(heat_plot(frequency_table, eu_xgb[i]))
+dev.off()
+
+# xgb model, 2012-2016 training, 2017 & 2018 forecast
+for (i in 1:length(eu_xgb)){
+  pdf(paste0(eu_xgb[i],".pdf"))
+  forecast_result <-  xgboost.model.pred(fluEuro.incidence, eu_xgb[i], 10, 2, 4, 1)
+  frequency_table <- freq_table(forecast_result, 10)
+  print(heat_plot(frequency_table, eu_xgb[i]))
+  dev.off()
+}
+
+# historical model, 2012-2016 training, 2017 & 2018 forecast
+for (i in 1:length(eu_xgb)){
+  pdf(paste0(eu_xgb[i],".pdf"))
+  forecast_result <- hist_average(fluEuro.incidence, eu_xgb[i], 10, 1)
+  forecast_result <- forecast_result[which(grepl("2017|2018", forecast_result$Week_time)),]
+  frequency_table <- freq_table(forecast_result, 10)
+  print(heat_plot(frequency_table, eu_xgb[i]))
+  dev.off()
+}
+
+# repeat model,  2012-2016 training, 2017 & 2018 forecast
+for (i in 1:length(eu_xgb)){
+  pdf(paste0(eu_xgb[i],".pdf"))
+  forecast_result <- repeat_model(fluEuro.incidence, eu_xgb[i], 10, 1)
+  forecast_result <- forecast_result[which(grepl("2017|2018", forecast_result$Week_time)),]
+  frequency_table <- freq_table(forecast_result, 10)
+  print(heat_plot(frequency_table, eu_xgb[i]))
+  dev.off()
+}
+
+
+#' Time series comparison plot
+for (i in 1:length(eu_xgb)){
+  pdf(paste0(eu_xgb[i],".pdf"))
+  forecast_result <- xgboost.model.pred(fluEuro.incidence, eu_xgb[i],10,2,4,1)
+  print(predTS_plot(forecast_result))
+  dev.off()
+}
+

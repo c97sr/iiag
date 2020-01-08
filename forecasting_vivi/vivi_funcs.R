@@ -471,7 +471,7 @@ heat_plot <- function(frequencyTable, countryName){
   colnames(frequencyMatrix) <- c(1:10)
   rownames(frequencyMatrix) <- c(1:10)
   # my.at will be changed according to the number of data points
-  my.at <- c(0,1,5,10,15,20,25,30,40,50)
+  my.at <- c(0,10,30,50,100,150,200,250,300,350,550)
   my.brks <- seq(0, max(frequencyMatrix, na.rm = TRUE), length.out = length(my.at))
   blues <- brewer.pal(9, "Blues")
   reds <-  brewer.pal(9, "Reds")
