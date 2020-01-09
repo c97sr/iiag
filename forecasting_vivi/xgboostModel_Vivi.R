@@ -617,16 +617,19 @@ for (i in 1:length(eu_xgb)){
 }
 
 #' Following is the dataframe of accuracy score of all individual country 
-Euro_accuracyIndi_1718_df <- accuracy_score(Euro_accuracyIndi_15, eu_xgb)
-
-
+Euro_accuracyIndi_1718 <- NULL
+for (i in 1:length(eu_xgb)){
+  tmp <- compare_accuracy_indi(eu_xgb[i],fluEuro.incidence, 10,2,4,1)
+  Euro_accuracyIndi_1718 <- append(Euro_accuracyIndi_1718, tmp)
+  
+}
+Euro_accuracyIndi_1718_df <- accuracy_score(Euro_accuracyIndi_1718, eu_xgb)
 
 # write.csv(Euro_accuracyIndi_1718_df, "Euro_accuracy_score.csv")
 
 #' Heat plot
 
 # Euro
-
 forecast_result <- NULL
 for (i in 1:length(eu_xgb)){
   tmp <-  xgboost.model.pred(fluEuro.incidence, eu_xgb[i], 10, 2, 4, 1)
@@ -634,7 +637,7 @@ for (i in 1:length(eu_xgb)){
 }
 pdf("Europe.pdf")
 frequency_table <- freq_table(forecast_result, 10)
-print(heat_plot(frequency_table, eu_xgb[i]))
+print(heat_plot(frequency_table, "Europe", Euro_accuracy_1718$score))
 dev.off()
 
 # xgb model, 2012-2016 training, 2017 & 2018 forecast
@@ -642,7 +645,8 @@ for (i in 1:length(eu_xgb)){
   pdf(paste0(eu_xgb[i],".pdf"))
   forecast_result <-  xgboost.model.pred(fluEuro.incidence, eu_xgb[i], 10, 2, 4, 1)
   frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, eu_xgb[i]))
+  print(heat_plot(frequency_table, eu_countries_region$Country[i], 
+                  Euro_accuracyIndi_1718_df$Accuracy_score[i]))
   dev.off()
 }
 
@@ -650,9 +654,11 @@ for (i in 1:length(eu_xgb)){
 for (i in 1:length(eu_xgb)){
   pdf(paste0(eu_xgb[i],".pdf"))
   forecast_result <- hist_average(fluEuro.incidence, eu_xgb[i], 10, 1)
-  forecast_result <- forecast_result[which(grepl("2017|2018", forecast_result$Week_time)),]
-  frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, eu_xgb[i]))
+  pred <- forecast_result$pred
+  pred <- pred[which(grepl("2017|2018", pred$Week_time)),]
+  frequency_table <- freq_table(pred, 10)
+  print(heat_plot(frequency_table, eu_countries_region$Country[i],
+                  forecast_result$score[i]))
   dev.off()
 }
 
@@ -660,9 +666,11 @@ for (i in 1:length(eu_xgb)){
 for (i in 1:length(eu_xgb)){
   pdf(paste0(eu_xgb[i],".pdf"))
   forecast_result <- repeat_model(fluEuro.incidence, eu_xgb[i], 10, 1)
-  forecast_result <- forecast_result[which(grepl("2017|2018", forecast_result$Week_time)),]
-  frequency_table <- freq_table(forecast_result, 10)
-  print(heat_plot(frequency_table, eu_xgb[i]))
+  pred <- forecast_result$pred
+  pred <- pred[which(grepl("2017|2018", pred$Week_time)),]
+  frequency_table <- freq_table(pred, 10)
+  print(heat_plot(frequency_table, eu_countries_region$Country[i],
+                  forecast_result$score[i]))
   dev.off()
 }
 
@@ -675,3 +683,21 @@ for (i in 1:length(eu_xgb)){
   dev.off()
 }
 
+#' TS plot for the whole set
+for (i in 1:length(eu_xgb)){
+  pdf(paste0(eu_xgb[i],".pdf"))
+  print(rawData_TS_plot(fluEuro.incidence, eu_xgb[i],eu_countries_region$Country[i]))
+  dev.off()
+}
+
+#' 
+oneWeek_ahead_accuracyByCountry_hist <- NULL
+for (i in 1:nrow(eu_xgb)){
+  tmp <- length(which(oneWeek_ahead_totalAccuracy_hist$Accurate[as.character(country_idd$ISO3[i]) == as.character(oneWeek_ahead_totalAccuracy_hist$Country)]==1))
+  tmp2 <- length(which(as.character(country_idd$ISO3[i]) == as.character(oneWeek_ahead_totalAccuracy_hist$Country)))
+  tmp3 <- round(tmp/tmp2,2)
+  tmp <- cbind(as.character(country_idd$mapCountry[i]),tmp,tmp2,tmp3)
+  oneWeek_ahead_accuracyByCountry_hist <- rbind(oneWeek_ahead_accuracyByCountry_hist,tmp)
+}
+oneWeek_ahead_accuracyByCountry_hist <- as.data.frame(oneWeek_ahead_accuracyByCountry_hist)
+colnames(oneWeek_ahead_accuracyByCountry_hist) <- c("Country","Accurate","Total","Percentage")
