@@ -9,8 +9,8 @@ load.iiag.data.fluid <- function(datadir="../iiag_data/data_old/") {
     if (!is.na(match("ISO_Week",curnames))) {
       newnames[match("ISO_Week",curnames)] <- "ISO_WEEK"
     }
-    if (!is.na(match("ï..ISO3",curnames))) {
-      newnames[match("ï..ISO3",curnames)] <- "ISO3"
+    if (!is.na(match("?..ISO3",curnames))) {
+      newnames[match("?..ISO3",curnames)] <- "ISO3"
     }
     newnames
   }
@@ -331,7 +331,7 @@ compare_accuracy_indi <- function(individual_country, flu_data, num_category,tra
   individual_pred <- as.data.frame(individual_pred)
   colnames(individual_pred) <- c("Country","week_time","Observation","Prediction","Accurate")
   
-  score <- length(which(individual_pred$Accurate == 1))/nrow(individual_pred)
+  score <- round(length(which(individual_pred$Accurate == 1))/nrow(individual_pred),3)
   
   result <- NULL
   result$individual_pred <- individual_pred
@@ -354,8 +354,8 @@ compare_accuracy <- function(country_list,flu_data,num_category, train_num_start
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country","week_time","Observation","Prediction","Accurate")
   
-  score <- length(which(pred$Accurate == 1))/nrow(pred)
-  
+  score <- round(length(which(pred$Accurate == 1))/nrow(pred),3)
+
   result <- NULL
   result$pred <- pred
   result$score <- score
@@ -466,12 +466,20 @@ freq_table <- function(prediction, row_col){
   squared_freq
 }
 
-heat_plot <- function(frequencyTable, countryName){
+heat_plot <- function(frequencyTable, countryName, score){
   frequencyMatrix <- as.matrix(frequencyTable)
   colnames(frequencyMatrix) <- c(1:10)
   rownames(frequencyMatrix) <- c(1:10)
   # my.at will be changed according to the number of data points
-  my.at <- c(0,10,30,50,100,150,200,250,300,350,550)
+  if(max(frequencyTable) <= 100){
+    my.at <- c(0,1,2,5,10,20,30,50,70,100)
+  }
+  if(max(frequencyTable) > 500){
+    my.at <- c(0,10,30,50,100,150,200,250,300,350,550)
+  }
+  if(max(frequencyTable) > 100 && max(frequencyTable) < 500){
+    my.at <- c(0,10,30,50,100,150,250,300,350,400,450,499)
+  }
   my.brks <- seq(0, max(frequencyMatrix, na.rm = TRUE), length.out = length(my.at))
   blues <- brewer.pal(9, "Blues")
   reds <-  brewer.pal(9, "Reds")
@@ -485,8 +493,9 @@ heat_plot <- function(frequencyTable, countryName){
       }
     }
   }
+  title <- paste(countryName,"accuracy score:", score, collapse = " ")
   country <- countryName 
-  levelplot(t(frequencyMatrix), xlab = 'Obeserved', ylab = 'Forecast',
+  levelplot(t(frequencyMatrix), xlab = 'Obeserved', ylab = 'Forecast', main = title,
             panel = myPanel, par.settings=mapTheme, at=my.at, colorkey=myColorkey, margin=F)
 }
 
@@ -648,7 +657,14 @@ hist_average <- function(flu_data, country,num_category, numWeek_ahead){
       }
     }
   }
-  pred
+  
+  score <- round(length(which(pred$Accurate == 1))/nrow(pred),3)
+  
+  result <- NULL
+  result$pred <- pred
+  result$score <- score
+  
+  return(result)
 }
 
 # compare 1,2,3,4-week ahead forecast accuracy
@@ -663,7 +679,7 @@ compare_accuracy_hist <- function(flu_data,country,num_category,numWeek_ahead){
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country",colnames(pred)[2:ncol(pred)])
   
-  score <- length(which(pred$Accurate == 1))/nrow(pred)
+  score <- round(length(which(pred$Accurate == 1))/nrow(pred),3)
   
   result <- NULL
   result$pred <- pred
@@ -775,7 +791,14 @@ repeat_model <- function(flu_data,country, num_category, numWeek_ahead){
     }
   }
   
-  pred
+  score <- round(length(which(pred$Accurate == 1))/nrow(pred),3)
+  
+  result <- NULL
+  result$pred <- pred
+  result$score <- score
+  
+  return(result)
+  
 }
 
 #' calculate the accuracy of repeat model
@@ -790,7 +813,7 @@ compare_accuracy_repeat <- function(flu_data,country,num_category,numWeek_ahead)
   pred <- as.data.frame(pred)
   colnames(pred) <- c("Country",colnames(pred)[2:ncol(pred)])
   
-  score <- length(which(pred$Accurate == 1))/nrow(pred)
+  score <- round(length(which(pred$Accurate == 1))/nrow(pred),3)
   
   result <- NULL
   result$pred <- pred
@@ -918,10 +941,9 @@ map.country.name <- function(using_country_name){
   world_map <- map_data("world")
   index <- which(using_country_name %in% unique(world_map$region)==FALSE)
   index
-  
 }
 
-#' Tidy up accuracy scores of countries into a dataframe
+#' Tidy up accuracy scores of individual countries into a dataframe
 accuracy_score <- function(forecast_result, country_code){
   dataframe <- matrix(NA, nrow = length(country_code), ncol = 2)
   

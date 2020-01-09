@@ -5,10 +5,6 @@ Sys.time()
 rm(list = ls(all = TRUE))
 
 
-library("knitr")
-library("xgboost")
-library("stringr")
-
 # source("E:/Imperial/iiag/forecasting_vivi/fluView_funcs_vivi.R")
 source("C:/Users/hw3616/Desktop/Imperial/Project1_Forecasting/Project_Coding/iiag/forecasting_vivi/fluView_funcs_vivi.R")
 
