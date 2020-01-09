@@ -4,7 +4,7 @@ gbm_complex <- function(data, country, num_category,nWeek_ahead){
   yr <- seq(2010, 2017, by = 1)
   initial_data <- c()
   for (i in 1:length(yr)){
-    tmp <- extract_incidence.idd(data, country_code = country, yr[i])
+    tmp <- extract.incidence.idd(data, country_code = country, yr[i])
     initial_data <- rbind(initial_data, tmp)
   }
   initial_data <- as.data.frame(initial_data)

@@ -182,8 +182,8 @@ extract.incidence.idd <- function(flu_data,
 }
 
 #' check the data availablity in each year
-duration <- function(country){
-  year_time <- c(2010:2018)
+duration <- function(country,maxYear, minYear){
+  year_time <- c(minYear:maxYear)
   
   flu_data_complex <- gbm_complex(fluWHO.incidence, country, 10,1)
   year_start <- min(as.numeric(substr(rownames(flu_data_complex),0,4)))
