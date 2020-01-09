@@ -1,4 +1,5 @@
-load.iiag.data.fluView <- function(datadir="../fluView_data") {
+
+load.iiag.data.fluView <- function(flu_data) {
   
   ## Helper function to fix some header names to be used below
   fix_headers <- function(x){
@@ -26,7 +27,7 @@ load.iiag.data.fluView <- function(datadir="../fluView_data") {
   }
   ## Define the strings for all the files needed and read 
  
-  fview_ILINet <- read.csv(paste0(datadir,"/ILINet.csv"))
+  fview_ILINet <- flu_data
   
   ## Fix names for fluView ILINet
   curnames <- unlist(fview_ILINet[1,], use.names=FALSE)
@@ -66,12 +67,6 @@ fix_headers <- function(x){
   x
 }
 
-header <- as.character(unlist(fluview[1,],use.names=FALSE))
-headernew <- c()
-for (i in 1:length(header)){
-  tmp <- fix_headers(header[i])
-  headernew <- append(headernew, tmp)
-}
 
 #' Extract incidence 
 extract.incidence.fluView <- function(fluView_data,
@@ -79,18 +74,18 @@ extract.incidence.fluView <- function(fluView_data,
                                       # sel_ag,
                                       # sel_measure,
                                       minYear,
-                                      maxYear) {
+                                      maxYear){
   ## reorder data by country alphabetically
-  fluView_data <- fluView_data[order(fluView_data$REGION),]
+  fluView_data <- fluView_data[order(fluView_data$region),]
   
   ## Setup the week scale in a format consistent with the week format
   ## in the data and cope with 53-week years. Needs the list of 53 week years
   ## extending in both directions.
   ## Perhaps should have a few lines to get rid of data NAs and avoid a warning
   ## at the next line?
-  fluView_data$YRWEEK  <- paste(fluView_data$YEAR,sprintf("%02d",as.numeric(as.character(fluView_data$WEEK))),sep="-")
+  fluView_data$yrweek  <- paste(fluView_data$year,sprintf("%02d",as.numeric(as.character(fluView_data$week))),sep="-")
 
-  min(as.numeric(as.character(fluView_data$YEAR)))
+  min(as.numeric(as.character(fluView_data$year)))
   yrs53Weeks <- c(2015,2020)
   currentYear <- minYear
   vecWeekScale <- NULL
@@ -115,7 +110,7 @@ extract.incidence.fluView <- function(fluView_data,
   for (cur_iso3 in sel_states) {
     
     ## Define criteria and subset the data
-    crit1 <- (fluView_data$REGION == cur_iso3)
+    crit1 <- (fluView_data$region == cur_iso3)
     # if(!("AGEGROUP_CODE" %in% colnames(dfId))) {
       # crit2 <- TRUE
     # } else {
@@ -124,7 +119,7 @@ extract.incidence.fluView <- function(fluView_data,
     
     # crit3 <- (dfId$MEASURE_CODE %in% sel_measure)
     tmpdf <- fluView_data[crit1,]
-    tmpdf <- tmpdf[order(tmpdf$YRWEEK),]
+    tmpdf <- tmpdf[order(tmpdf$yrweek),]
     
     ## Setup the preconditions for the nested while loops
     max_ind_rtn <- dim(rtnmat)[1]
@@ -143,7 +138,7 @@ extract.incidence.fluView <- function(fluView_data,
     ## in future within this loop if needed.
     while (cur_ind_df <= max_ind_df) {
       while (
-        sel_weeks[cur_ind_rtn] != tmpdf$YRWEEK[cur_ind_df] &&
+        sel_weeks[cur_ind_rtn] != tmpdf$yrweek[cur_ind_df] &&
         cur_ind_rtn <= max_ind_rtn
       ) {
         cur_ind_rtn <- cur_ind_rtn + 1
@@ -151,12 +146,7 @@ extract.incidence.fluView <- function(fluView_data,
       
       if (cur_ind_rtn <= max_ind_rtn) {
         val_rtn <- rtnmat[cur_ind_rtn,cur_iso3]
-        val_df <- tmpdf$ILITOTAL[cur_ind_df]
-        if (as.character(val_df) == "X"){
-          val_df <- as.character(val_df)
-        }else{
-          val_df <- as.numeric(as.character(val_df))
-        }
+        val_df <- tmpdf$ilitotal[cur_ind_df]
         if (!is.na(val_df)) {
           if (is.na(val_rtn)) {
             rtnmat[cur_ind_rtn,cur_iso3] <- val_df
@@ -170,7 +160,7 @@ extract.incidence.fluView <- function(fluView_data,
   }
   
   ## Return the populated incidence matrix as only result of function
-  rtnmat
+  rtnmat 
 }
 
 while (cur_ind_df <= max_ind_df) {
